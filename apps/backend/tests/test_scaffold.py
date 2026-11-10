@@ -10,6 +10,7 @@ from app.chain import commerce
 from app.core.config import Settings
 from app.core.errors import FeatureDisabled
 from app.db.base import Base
+from tests.conftest import auth_headers
 
 
 def test_health_reports_avalanche_fuji(client):
@@ -43,17 +44,22 @@ def test_fee_schedule(client):
     ],
 )
 def test_scaffolded_endpoints_return_501(client, method, path, body):
+    headers = auth_headers()
     resp = (
-        getattr(client, method)(path, json=body)
+        getattr(client, method)(path, json=body, headers=headers)
         if body is not None
-        else getattr(client, method)(path)
+        else getattr(client, method)(path, headers=headers)
     )
     assert resp.status_code == 501, resp.text
     assert resp.json()["error"] == "not_implemented"
 
 
 def test_create_agent_validates_slug(client):
-    resp = client.post("/api/v1/agents", json={"slug": "Bad Slug!", "name": "x"})
+    resp = client.post(
+        "/api/v1/agents",
+        json={"slug": "Bad Slug!", "name": "x"},
+        headers=auth_headers(),
+    )
     assert resp.status_code == 422
 
 

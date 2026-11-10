@@ -10,10 +10,12 @@ from app.control_plane.jobs.models import Job, JobStatus
 from app.control_plane.wallets.models import Wallet
 from app.core.config import SettlementMode
 
+DEFAULT_OWNER_ID = "0x000000000000000000000000000000000000dead"
+
 
 async def make_agent(
     db: AsyncSession,
-    owner_id: str = "dev-user",
+    owner_id: str = DEFAULT_OWNER_ID,
     **kw: Any,
 ) -> Agent:
     slug = kw.pop("slug", f"agent-{uuid.uuid4().hex[:8]}")

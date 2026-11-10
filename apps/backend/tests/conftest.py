@@ -11,11 +11,20 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.core.auth.tokens import create_access_token
 from app.core.config import settings
 from app.data_plane.gateway.main import app as gateway_app
 from app.db.base import Base
 from app.db.session import get_session
 from app.main import app
+
+DEFAULT_TEST_ADDRESS = "0x000000000000000000000000000000000000dEaD"
+
+
+def auth_headers(address: str | None = None) -> dict[str, str]:
+    addr = address or DEFAULT_TEST_ADDRESS
+    token = create_access_token(addr)
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _get_test_db_url() -> str:
@@ -82,7 +91,10 @@ async def api(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
 
     app.dependency_overrides[get_session] = _override_get_session
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+    headers = auth_headers()
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test", headers=headers
+    ) as client:
         yield client
     app.dependency_overrides.pop(get_session, None)
 

@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     public_gateway_url: str = "http://localhost:8001"
 
+    # ── Auth (SIWE + JWT) ──────────────────────────────────────────────────
+    auth_jwt_secret: str = "dev-insecure-secret-change-in-prod"
+    auth_token_ttl_s: int = 86400
+    auth_domain: str = "localhost:5173"
+
     # ── Infra ──────────────────────────────────────────────────────────────
     database_url: str = "postgresql+asyncpg://studio:studio@localhost:5432/studio"
     redis_url: str = "redis://localhost:6379/0"
