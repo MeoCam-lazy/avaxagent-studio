@@ -36,6 +36,7 @@ class Job(UUIDPrimaryKey, Timestamps, Base):
     client_address: Mapped[str | None] = mapped_column(String(42), nullable=True)
     amount_atomic: Mapped[int] = mapped_column(TokenAmount, default=0)
     asset: Mapped[str] = mapped_column(String(42))
+    payment_nonce: Mapped[str | None] = mapped_column(String(66), nullable=True, unique=True)
 
     request: Mapped[dict] = mapped_column(JSON, default=dict)  # task input from A2A
     deliverable_uri: Mapped[str | None] = mapped_column(Text, nullable=True)

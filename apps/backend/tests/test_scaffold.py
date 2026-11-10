@@ -43,9 +43,11 @@ def test_fee_schedule(client):
     ],
 )
 def test_scaffolded_endpoints_return_501(client, method, path, body):
-    resp = getattr(client, method)(path, json=body) if body is not None else getattr(
-        client, method
-    )(path)
+    resp = (
+        getattr(client, method)(path, json=body)
+        if body is not None
+        else getattr(client, method)(path)
+    )
     assert resp.status_code == 501, resp.text
     assert resp.json()["error"] == "not_implemented"
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, String, Text
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,7 +46,9 @@ class Agent(UUIDPrimaryKey, Timestamps, Base):
     chain_id: Mapped[int] = mapped_column(BigInteger)
     erc8004_agent_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     agent_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+    registration_tx_hash: Mapped[str | None] = mapped_column(String(66), nullable=True)
 
     wallet_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("wallets.id", ondelete="SET NULL"), nullable=True
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
