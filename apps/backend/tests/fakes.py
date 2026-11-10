@@ -82,4 +82,3 @@ class FakeQueue:
 
     async def enqueue_job(self, function: str, *args: Any, **kwargs: Any) -> None:
         self.enqueued.append((function, args, kwargs))
-

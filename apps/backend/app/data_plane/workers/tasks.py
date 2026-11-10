@@ -33,9 +33,7 @@ async def register_agent(ctx: dict[str, Any], agent_id: str) -> None:
 
 async def _register_agent_with_session(db: AsyncSession, agent_id: str) -> None:
     agent_uuid = uuid.UUID(agent_id)
-    agent = (
-        await db.execute(select(Agent).where(Agent.id == agent_uuid))
-    ).scalar_one_or_none()
+    agent = (await db.execute(select(Agent).where(Agent.id == agent_uuid))).scalar_one_or_none()
     if not agent:
         return
 

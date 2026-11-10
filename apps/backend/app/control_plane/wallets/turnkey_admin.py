@@ -98,8 +98,7 @@ class HttpTurnkeyAdmin:
 
             attempts = 0
             while (
-                status in ("ACTIVITY_STATUS_PENDING", "ACTIVITY_STATUS_CREATED")
-                and attempts < 10
+                status in ("ACTIVITY_STATUS_PENDING", "ACTIVITY_STATUS_CREATED") and attempts < 10
             ):
                 attempts += 1
                 await asyncio.sleep(0.5)

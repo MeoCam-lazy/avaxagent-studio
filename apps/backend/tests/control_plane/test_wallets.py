@@ -27,9 +27,7 @@ def override_wallet_dependencies():
 
 
 @pytest.mark.asyncio
-async def test_provision_creates_wallet_and_moves_status(
-    api: httpx.AsyncClient, db: AsyncSession
-):
+async def test_provision_creates_wallet_and_moves_status(api: httpx.AsyncClient, db: AsyncSession):
     agent = await make_agent(db, status=AgentStatus.DRAFT)
 
     res = await api.post(f"/api/v1/agents/{agent.id}/wallet")
@@ -81,9 +79,7 @@ async def test_policy_update_calls_admin(
         "allowed_contracts": ["0x5425890298aed601595a70ab815c96711a31bc65"],
         "allow_erc8183": False,
     }
-    update_res = await api.put(
-        f"/api/v1/agents/{agent.id}/wallet/policy", json=policy_payload
-    )
+    update_res = await api.put(f"/api/v1/agents/{agent.id}/wallet/policy", json=policy_payload)
     assert update_res.status_code == 200
     data = update_res.json()
     assert data["policy"]["max_value_per_call_atomic"] == 2_000_000

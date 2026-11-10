@@ -64,9 +64,7 @@ class JobService:
         await self.get(owner_id, job_id)
 
         stmt = (
-            select(JobEvent)
-            .where(JobEvent.job_id == job_id)
-            .order_by(JobEvent.created_at.asc())
+            select(JobEvent).where(JobEvent.job_id == job_id).order_by(JobEvent.created_at.asc())
         )
         res = await self.session.execute(stmt)
         events = res.scalars().all()

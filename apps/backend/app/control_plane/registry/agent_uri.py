@@ -14,9 +14,7 @@ from app.data_plane.storage.service import get_storage
 def build_agent_uri(agent: Agent) -> str:
     name = agent.name or "Agent"
     description = agent.description or agent.name or "AI Agent"
-    endpoint_url = (
-        f"{settings.public_gateway_url}/agents/{agent.slug}/.well-known/agent-card.json"
-    )
+    endpoint_url = f"{settings.public_gateway_url}/agents/{agent.slug}/.well-known/agent-card.json"
     endpoints = [AgentEndpoint(name="A2A", endpoint=endpoint_url, version="0.3.0")]
     data_uri = AgentURIGenerator.generate_agent_uri(
         name=name,
