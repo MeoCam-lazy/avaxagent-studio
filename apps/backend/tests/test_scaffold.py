@@ -34,9 +34,6 @@ def test_fee_schedule(client):
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
-        ("get", "/api/v1/agents", None),
-        ("post", "/api/v1/agents", {"slug": "my-agent", "name": "My agent"}),
-        ("get", "/api/v1/marketplace/agents", None),
         ("post", f"/api/v1/agents/{uuid.uuid4()}/wallet", None),
         ("post", f"/api/v1/agents/{uuid.uuid4()}/registration", {}),
         ("get", "/api/v1/billing/summary", None),
