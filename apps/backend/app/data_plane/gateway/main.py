@@ -13,6 +13,7 @@ from app.chain import network as net
 from app.core.errors import register_exception_handlers
 from app.data_plane.gateway import service
 from app.data_plane.gateway.schemas import JsonRpcRequest
+from app.db.session import DbSession
 
 app = FastAPI(title="Avaxagent Studio A2A Gateway", version="0.1.0")
 register_exception_handlers(app)
@@ -24,8 +25,8 @@ async def health() -> dict[str, Any]:
 
 
 @app.get("/agents/{slug}/.well-known/agent-card.json")
-async def agent_card(slug: str) -> dict[str, Any]:
-    return await service.agent_card(slug)
+async def agent_card(slug: str, db: DbSession) -> dict[str, Any]:
+    return await service.agent_card(db, slug)
 
 
 @app.post("/agents/{slug}/a2a")

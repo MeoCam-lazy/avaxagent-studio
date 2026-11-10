@@ -68,7 +68,11 @@ def test_create_agent_validates_slug(client):
 
 def test_gateway_routes(gateway):
     assert gateway.get("/health").json()["chain_id"] == 43113
-    resp = gateway.get("/agents/demo/.well-known/agent-card.json")
+    assert gateway.get("/agents/demo/.well-known/agent-card.json").status_code == 404
+    resp = gateway.post(
+        "/agents/demo/a2a",
+        json={"jsonrpc": "2.0", "id": 1, "method": "message/send", "params": {}},
+    )
     assert resp.status_code == 501
 
 
