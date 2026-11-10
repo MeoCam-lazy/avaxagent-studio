@@ -113,4 +113,10 @@ def client() -> TestClient:
 
 @pytest.fixture
 def gateway() -> TestClient:
-    return TestClient(gateway_app)
+    async def _test_session():
+        async with TestSessionLocal() as session:
+            yield session
+
+    gateway_app.dependency_overrides[get_session] = _test_session
+    yield TestClient(gateway_app)
+    gateway_app.dependency_overrides.clear()

@@ -73,7 +73,7 @@ def test_gateway_routes(gateway):
         "/agents/demo/a2a",
         json={"jsonrpc": "2.0", "id": 1, "method": "message/send", "params": {}},
     )
-    assert resp.status_code == 501
+    assert resp.status_code == 404
 
 
 def test_erc8183_disabled_until_studio_deploys_contracts():

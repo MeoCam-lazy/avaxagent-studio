@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     turnkey_api_private_key: str | None = None
     turnkey_api_base_url: str = "https://api.turnkey.com"
 
+    # ── Relayer (x402 settlement) ──────────────────────────────────────────
+    relayer_sign_with: str | None = None
+    relayer_organization_id: str | None = None
+
     # ── Storage ────────────────────────────────────────────────────────────
     storage_backend: str = "local"  # local | ipfs | s3
     storage_local_path: str = ".agent-data"

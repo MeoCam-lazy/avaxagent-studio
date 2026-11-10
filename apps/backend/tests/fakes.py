@@ -82,3 +82,16 @@ class FakeQueue:
 
     async def enqueue_job(self, function: str, *args: Any, **kwargs: Any) -> None:
         self.enqueued.append((function, args, kwargs))
+
+
+class FakeRelayer:
+    def __init__(self, tx_hash: str = "0x" + "aa" * 32, should_fail: bool = False) -> None:
+        self.tx_hash = tx_hash
+        self.should_fail = should_fail
+        self.calls: list[tuple[str, Any, str]] = []
+
+    def settle(self, token: str, auth: Any, signature: str) -> str:
+        self.calls.append((token, auth, signature))
+        if self.should_fail:
+            raise RuntimeError("settlement reverted")
+        return self.tx_hash

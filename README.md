@@ -151,6 +151,7 @@ You can also run everything in Docker: `docker compose --profile apps up`.
 | `STUDIO_FEE_BPS` | `500` | 5% studio fee |
 | `STUDIO_TREASURY_ADDRESS` | empty | Wallet that receives fees |
 | `TURNKEY_ORGANIZATION_ID`, `TURNKEY_API_PUBLIC_KEY`, `TURNKEY_API_PRIVATE_KEY` | empty | Parent org. Each agent gets its own sub-org |
+| `RELAYER_SIGN_WITH`, `RELAYER_ORGANIZATION_ID` | empty | Studio relayer wallet for x402 settlement |
 | `STORAGE_BACKEND` | `local` | `local`, `ipfs` or `s3` |
 | `STORAGE_LOCAL_PATH` / `STORAGE_API_KEY` / `S3_BUCKET` | `.agent-data` / empty / empty | |
 | `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` | `anthropic` / `claude-sonnet-5-5` / empty | Job workers |

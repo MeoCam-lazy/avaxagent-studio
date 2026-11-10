@@ -25,7 +25,7 @@ from app.control_plane.agents.models import AgentStatus
 from app.control_plane.agents.service import AgentService
 from app.control_plane.wallets.models import Wallet
 from app.core.config import settings
-from app.core.errors import NotImplementedYet
+from app.data_plane.gateway import a2a
 from app.data_plane.gateway.schemas import JsonRpcRequest
 
 
@@ -76,5 +76,22 @@ async def agent_card(db: AsyncSession, slug: str) -> dict[str, Any]:
     }
 
 
-async def handle_a2a(slug: str, req: JsonRpcRequest, x_payment: str | None) -> dict[str, Any]:
-    raise NotImplementedYet("gateway.a2a")
+async def handle_a2a(
+    db: AsyncSession,
+    slug: str,
+    req: JsonRpcRequest,
+    x_payment: str | None,
+    *,
+    relayer: Any,
+    chain_reader: Any,
+    queue: Any,
+) -> Any:
+    return await a2a.handle_a2a(
+        db,
+        slug,
+        req,
+        x_payment,
+        relayer=relayer,
+        chain_reader=chain_reader,
+        queue=queue,
+    )

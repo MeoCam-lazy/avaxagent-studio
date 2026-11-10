@@ -5,13 +5,16 @@ Run: ``uvicorn app.data_plane.gateway.main:app --port 8001``
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, Header
+from fastapi import Depends, FastAPI, Header, Response
 
 from app.chain import network as net
+from app.chain.reader import ChainReader, get_chain_reader
 from app.core.errors import register_exception_handlers
+from app.core.queue import get_queue
 from app.data_plane.gateway import service
+from app.data_plane.gateway.relayer import Relayer, get_relayer
 from app.data_plane.gateway.schemas import JsonRpcRequest
 from app.db.session import DbSession
 
@@ -33,6 +36,18 @@ async def agent_card(slug: str, db: DbSession) -> dict[str, Any]:
 async def a2a(
     slug: str,
     body: JsonRpcRequest,
+    db: DbSession,
+    relayer: Annotated[Relayer, Depends(get_relayer)],
+    chain_reader: Annotated[ChainReader, Depends(get_chain_reader)],
+    queue: Annotated[Any, Depends(get_queue)],
     x_payment: str | None = Header(default=None, alias="X-PAYMENT"),
-) -> dict[str, Any]:
-    return await service.handle_a2a(slug, body, x_payment)
+) -> Response:
+    return await service.handle_a2a(
+        db,
+        slug,
+        body,
+        x_payment,
+        relayer=relayer,
+        chain_reader=chain_reader,
+        queue=queue,
+    )
