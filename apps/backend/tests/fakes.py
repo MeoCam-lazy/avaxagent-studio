@@ -53,6 +53,10 @@ class FakeChainReader(ChainReader):
         self._block_number = block_number
         self.used_authorizations: set[tuple[str, str, bytes]] = set()
         self.logs: list[dict[str, Any]] = []
+        self.log_calls: list[dict[str, Any]] = []
+
+    def set_block_number(self, n: int) -> None:
+        self._block_number = n
 
     def native_balance(self, address: str) -> int:
         return self._native_balance
@@ -70,6 +74,14 @@ class FakeChainReader(ChainReader):
         from_block: int,
         to_block: int,
     ) -> list[dict[str, Any]]:
+        self.log_calls.append(
+            {
+                "address": address,
+                "topics": topics,
+                "from_block": from_block,
+                "to_block": to_block,
+            }
+        )
         return self.logs
 
     def authorization_used(self, token: str, authorizer: str, nonce: bytes) -> bool:

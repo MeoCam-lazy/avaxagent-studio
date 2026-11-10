@@ -3,15 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 
 
-@dataclass(frozen=True)
+@dataclass
 class Stream:
     name: str
     description: str
-    enabled: bool
+    enabled: bool = True
+
+    async def address(self, db: AsyncSession) -> list[str] | str:
+        return []
+
+    async def topics(self, db: AsyncSession) -> list:
+        return []
+
+    async def handle(self, db: AsyncSession, logs: list[dict[str, Any]]) -> None:
+        pass
 
 
 def streams() -> list[Stream]:
