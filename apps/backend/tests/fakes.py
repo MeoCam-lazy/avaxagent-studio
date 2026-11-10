@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 import eth_account
 from eth_account.signers.local import LocalAccount
 
+from app.chain.reader import ChainReader
 from app.control_plane.wallets.schemas import WalletPolicy
 from app.control_plane.wallets.turnkey_admin import SubOrg, TurnkeyAdmin
 
@@ -36,3 +39,38 @@ class FakeTurnkeyAdmin(TurnkeyAdmin):
     ) -> str:
         self.policies[sub_org_id] = policy
         return f"policy-{sub_org_id}"
+
+
+class FakeChainReader(ChainReader):
+    def __init__(
+        self,
+        native_balance: int = 1_000_000_000_000_000_000,
+        erc20_balance: int = 100_000_000,
+        block_number: int = 123456,
+    ) -> None:
+        self._native_balance = native_balance
+        self._erc20_balance = erc20_balance
+        self._block_number = block_number
+        self.used_authorizations: set[tuple[str, str, bytes]] = set()
+        self.logs: list[dict[str, Any]] = []
+
+    def native_balance(self, address: str) -> int:
+        return self._native_balance
+
+    def erc20_balance(self, token: str, address: str) -> int:
+        return self._erc20_balance
+
+    def block_number(self) -> int:
+        return self._block_number
+
+    def get_logs(
+        self,
+        address: str | list[str],
+        topics: list,
+        from_block: int,
+        to_block: int,
+    ) -> list[dict[str, Any]]:
+        return self.logs
+
+    def authorization_used(self, token: str, authorizer: str, nonce: bytes) -> bool:
+        return (token.lower(), authorizer.lower(), nonce) in self.used_authorizations

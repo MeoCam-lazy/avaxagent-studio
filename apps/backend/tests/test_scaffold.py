@@ -34,7 +34,6 @@ def test_fee_schedule(client):
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
-        ("post", f"/api/v1/agents/{uuid.uuid4()}/wallet", None),
         ("post", f"/api/v1/agents/{uuid.uuid4()}/registration", {}),
     ],
 )
