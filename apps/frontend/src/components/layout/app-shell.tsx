@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 
+import { ConnectButton } from "@/components/connect-button";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { useNetwork } from "@/hooks/use-network";
@@ -25,6 +26,7 @@ export function AppShell() {
           ) : (
             <Badge variant="secondary">{isError ? "API offline" : "…"}</Badge>
           )}
+          <ConnectButton />
         </header>
         <main className="flex-1 space-y-6 p-6">
           <Outlet />

@@ -17,8 +17,8 @@ export default tseslint.config(
     },
   },
   {
-    // shadcn ui files export variants next to components by design.
-    files: ["src/components/ui/**/*.tsx"],
+    // shadcn ui files and test helpers export variants/utilities next to components by design.
+    files: ["src/components/ui/**/*.tsx", "src/test/**/*.{ts,tsx}"],
     rules: { "react-refresh/only-export-components": "off" },
   },
 );

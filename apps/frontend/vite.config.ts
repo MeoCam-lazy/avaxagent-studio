@@ -1,7 +1,7 @@
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // Dev: the control-plane API runs on :8000 and is proxied under /api, so the
 // browser talks to one origin (no CORS setup needed locally).
@@ -16,5 +16,9 @@ export default defineConfig({
       "/api": "http://localhost:8000",
       "/health": "http://localhost:8000",
     },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
   },
 });
