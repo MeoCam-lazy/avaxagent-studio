@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 
@@ -32,6 +32,12 @@ class FeatureDisabled(Exception):
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(HTTPException)
+    async def _http_exception(_: Request, exc: HTTPException) -> JSONResponse:
+        if isinstance(exc.detail, dict):
+            return JSONResponse(status_code=exc.status_code, content=exc.detail)
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail)})
+
     @app.exception_handler(NotImplementedYet)
     async def _not_implemented(_: Request, exc: NotImplementedYet) -> JSONResponse:
         return JSONResponse(

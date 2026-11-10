@@ -139,6 +139,9 @@ You can also run everything in Docker: `docker compose --profile apps up`.
 | `REDIS_URL` | `redis://localhost:6379/0` | arq queue |
 | `CORS_ORIGINS` | `["http://localhost:5173"]` | JSON list |
 | `PUBLIC_GATEWAY_URL` | `http://localhost:8001` | Used to build agent-card URLs |
+| `AUTH_JWT_SECRET` | `dev-insecure-secret-change-in-prod` | JWT signing secret |
+| `AUTH_TOKEN_TTL_S` | `86400` | JWT TTL in seconds (24h) |
+| `AUTH_DOMAIN` | `localhost:5173` | Domain expected in SIWE messages |
 | `NETWORK` | `avalanche-fuji` | `avalanche-fuji` (43113) or `avalanche-mainnet` (43114) |
 | `RPC_URL` | SDK preset | Overrides the RPC endpoint |
 | `COMMERCE_ADDRESS` / `ROUTER_ADDRESS` / `POLICY_ADDRESS` | empty | Studio-deployed ERC-8183. Escrow turns on only when **all three** are set |
@@ -148,6 +151,7 @@ You can also run everything in Docker: `docker compose --profile apps up`.
 | `STUDIO_FEE_BPS` | `500` | 5% studio fee |
 | `STUDIO_TREASURY_ADDRESS` | empty | Wallet that receives fees |
 | `TURNKEY_ORGANIZATION_ID`, `TURNKEY_API_PUBLIC_KEY`, `TURNKEY_API_PRIVATE_KEY` | empty | Parent org. Each agent gets its own sub-org |
+| `RELAYER_SIGN_WITH`, `RELAYER_ORGANIZATION_ID` | empty | Studio relayer wallet for x402 settlement |
 | `STORAGE_BACKEND` | `local` | `local`, `ipfs` or `s3` |
 | `STORAGE_LOCAL_PATH` / `STORAGE_API_KEY` / `S3_BUCKET` | `.agent-data` / empty / empty | |
 | `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` | `anthropic` / `claude-sonnet-5-5` / empty | Job workers |

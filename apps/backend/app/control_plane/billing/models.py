@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from enum import Enum
 
-from sqlalchemy import BigInteger, ForeignKey, String
+from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,6 +36,11 @@ class LedgerEntry(UUIDPrimaryKey, Timestamps, Base):
     amount_atomic: Mapped[int] = mapped_column(TokenAmount)
     chain_id: Mapped[int] = mapped_column(BigInteger)
     tx_hash: Mapped[str | None] = mapped_column(String(66), nullable=True)
+    log_index: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("chain_id", "tx_hash", "log_index", "kind", name="uq_ledger_onchain"),
+    )
 
 
 class Payout(UUIDPrimaryKey, Timestamps, Base):

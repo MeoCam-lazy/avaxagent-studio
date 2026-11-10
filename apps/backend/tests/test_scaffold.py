@@ -10,6 +10,7 @@ from app.chain import commerce
 from app.core.config import Settings
 from app.core.errors import FeatureDisabled
 from app.db.base import Base
+from tests.conftest import auth_headers
 
 
 def test_health_reports_avalanche_fuji(client):
@@ -33,32 +34,46 @@ def test_fee_schedule(client):
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
-        ("get", "/api/v1/agents", None),
-        ("post", "/api/v1/agents", {"slug": "my-agent", "name": "My agent"}),
-        ("get", "/api/v1/marketplace/agents", None),
-        ("post", f"/api/v1/agents/{uuid.uuid4()}/wallet", None),
-        ("post", f"/api/v1/agents/{uuid.uuid4()}/registration", {}),
-        ("get", "/api/v1/billing/summary", None),
-        ("get", "/api/v1/jobs", None),
+        (
+            "post",
+            "/api/v1/billing/payouts",
+            {
+                "agent_id": str(uuid.uuid4()),
+                "destination": "0x0000000000000000000000000000000000000000",
+                "amount_atomic": 100,
+            },
+        ),
+        ("get", "/api/v1/billing/payouts", None),
     ],
 )
 def test_scaffolded_endpoints_return_501(client, method, path, body):
-    resp = getattr(client, method)(path, json=body) if body is not None else getattr(
-        client, method
-    )(path)
+    headers = auth_headers()
+    resp = (
+        getattr(client, method)(path, json=body, headers=headers)
+        if body is not None
+        else getattr(client, method)(path, headers=headers)
+    )
     assert resp.status_code == 501, resp.text
     assert resp.json()["error"] == "not_implemented"
 
 
 def test_create_agent_validates_slug(client):
-    resp = client.post("/api/v1/agents", json={"slug": "Bad Slug!", "name": "x"})
+    resp = client.post(
+        "/api/v1/agents",
+        json={"slug": "Bad Slug!", "name": "x"},
+        headers=auth_headers(),
+    )
     assert resp.status_code == 422
 
 
 def test_gateway_routes(gateway):
     assert gateway.get("/health").json()["chain_id"] == 43113
-    resp = gateway.get("/agents/demo/.well-known/agent-card.json")
-    assert resp.status_code == 501
+    assert gateway.get("/agents/demo/.well-known/agent-card.json").status_code == 404
+    resp = gateway.post(
+        "/agents/demo/a2a",
+        json={"jsonrpc": "2.0", "id": 1, "method": "message/send", "params": {}},
+    )
+    assert resp.status_code == 404
 
 
 def test_erc8183_disabled_until_studio_deploys_contracts():

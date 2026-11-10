@@ -8,8 +8,10 @@ from app.control_plane.billing.router import router as billing_router
 from app.control_plane.jobs.router import router as jobs_router
 from app.control_plane.registry.router import router as registry_router
 from app.control_plane.wallets.router import router as wallets_router
+from app.core.auth.router import router as auth_router
 
 api_router = APIRouter()
+api_router.include_router(auth_router, prefix="/auth")
 api_router.include_router(agents_router)
 api_router.include_router(marketplace_router)
 api_router.include_router(wallets_router)

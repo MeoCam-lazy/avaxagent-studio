@@ -1,4 +1,4 @@
-"""Gateway logic. TODO: implement.
+"""Gateway logic.
 
 * ``agent_card``: build the A2A agent card from the agent config (name,
   skills, ``url = {PUBLIC_GATEWAY_URL}/agents/{slug}/a2a``) and advertise the
@@ -16,13 +16,82 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.errors import NotImplementedYet
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.chain import network as net
+from app.control_plane.agents.models import AgentStatus
+from app.control_plane.agents.service import AgentService
+from app.control_plane.wallets.models import Wallet
+from app.core.config import settings
+from app.data_plane.gateway import a2a
 from app.data_plane.gateway.schemas import JsonRpcRequest
 
 
-async def agent_card(slug: str) -> dict[str, Any]:
-    raise NotImplementedYet("gateway.agent_card")
+async def agent_card(db: AsyncSession, slug: str) -> dict[str, Any]:
+    agent = await AgentService(db).get_by_slug(slug)
+    if not agent or agent.status != AgentStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "agent_not_found"},
+        )
+
+    wallet_address: str | None = None
+    if agent.wallet_id:
+        wallet = (
+            await db.execute(select(Wallet).where(Wallet.id == agent.wallet_id))
+        ).scalar_one_or_none()
+        if wallet:
+            wallet_address = wallet.address
+
+    skills: list[dict[str, Any]] = []
+    for s in agent.skills or []:
+        if isinstance(s, dict):
+            skills.append(s)
+        elif isinstance(s, str):
+            skills.append({"id": s, "name": s})
+
+    return {
+        "name": agent.name,
+        "description": agent.description,
+        "url": f"{settings.public_gateway_url}/agents/{slug}/a2a",
+        "version": "1.0.0",
+        "capabilities": {"streaming": False},
+        "defaultInputModes": ["text"],
+        "defaultOutputModes": ["text"],
+        "skills": skills,
+        "extensions": {
+            "x402": {
+                "network": net.caip2(),
+                "asset": net.payment_asset_address(),
+                "price": str(int(agent.price_atomic)),
+                "payTo": wallet_address,
+            },
+            "erc8004": {
+                "registry": f"{net.caip2()}:{net.identity_registry()}",
+                "agentId": agent.erc8004_agent_id,
+            },
+        },
+    }
 
 
-async def handle_a2a(slug: str, req: JsonRpcRequest, x_payment: str | None) -> dict[str, Any]:
-    raise NotImplementedYet("gateway.a2a")
+async def handle_a2a(
+    db: AsyncSession,
+    slug: str,
+    req: JsonRpcRequest,
+    x_payment: str | None,
+    *,
+    relayer: Any,
+    chain_reader: Any,
+    queue: Any,
+) -> Any:
+    return await a2a.handle_a2a(
+        db,
+        slug,
+        req,
+        x_payment,
+        relayer=relayer,
+        chain_reader=chain_reader,
+        queue=queue,
+    )

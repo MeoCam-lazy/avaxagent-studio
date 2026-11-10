@@ -24,3 +24,6 @@ class X402Accept(BaseModel):
     amount: str
     maxTimeoutSeconds: int = 300  # noqa: N815
     extra: dict[str, str] = Field(default_factory=dict)  # EIP-712 name/version
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
