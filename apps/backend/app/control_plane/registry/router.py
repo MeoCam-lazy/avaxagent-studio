@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Annotated, Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app.control_plane.registry.schemas import (
     NetworkInfo,
@@ -10,6 +11,7 @@ from app.control_plane.registry.schemas import (
     RegistrationStatus,
 )
 from app.control_plane.registry.service import RegistryService, network_info
+from app.core.queue import get_queue
 from app.core.security import CurrentUser
 from app.db.session import DbSession
 
@@ -27,18 +29,29 @@ async def get_network() -> NetworkInfo:
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def register_agent(
-    agent_id: uuid.UUID, body: RegistrationRequest, user: CurrentUser, db: DbSession
+    agent_id: uuid.UUID,
+    body: RegistrationRequest,
+    user: CurrentUser,
+    db: DbSession,
+    queue: Annotated[Any, Depends(get_queue)],
 ) -> RegistrationStatus:
-    return await RegistryService(db).register(user.id, agent_id, body)
+    return await RegistryService(db, queue=queue).register(user.id, agent_id, body)
 
 
 @router.get("/agents/{agent_id}/registration", response_model=RegistrationStatus)
 async def registration_status(
-    agent_id: uuid.UUID, user: CurrentUser, db: DbSession
+    agent_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
 ) -> RegistrationStatus:
     return await RegistryService(db).status(user.id, agent_id)
 
 
 @router.post("/agents/{agent_id}/registration/refresh-uri", response_model=RegistrationStatus)
-async def refresh_uri(agent_id: uuid.UUID, user: CurrentUser, db: DbSession) -> RegistrationStatus:
-    return await RegistryService(db).refresh_uri(user.id, agent_id)
+async def refresh_uri(
+    agent_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    queue: Annotated[Any, Depends(get_queue)],
+) -> RegistrationStatus:
+    return await RegistryService(db, queue=queue).refresh_uri(user.id, agent_id)

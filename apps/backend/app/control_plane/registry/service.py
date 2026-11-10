@@ -1,28 +1,23 @@
-"""ERC-8004 registration. TODO: implement.
-
-``register`` should:
-1. build the registration file with ``ERC8004Agent.generate_agent_uri`` using
-   ``AgentEndpoint.a2a(f"{PUBLIC_GATEWAY_URL}/agents/{slug}")``,
-2. optionally pin it via the storage service (``ipfs://`` URI),
-3. enqueue ``REGISTER_AGENT`` so the tx (paid in AVAX by the agent wallet)
-   runs in a worker, not in the request,
-4. store ``erc8004_agent_id`` + tx hash once mined.
-"""
+"""ERC-8004 registration service."""
 
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chain import network as net
+from app.control_plane.agents.models import AgentStatus
+from app.control_plane.agents.service import AgentService
 from app.control_plane.registry.schemas import (
     NetworkInfo,
     RegistrationRequest,
     RegistrationStatus,
 )
 from app.core.config import settings
-from app.core.errors import NotImplementedYet
+from app.core.queue import REGISTER_AGENT, get_queue
 
 
 def network_info() -> NetworkInfo:
@@ -41,17 +36,70 @@ def network_info() -> NetworkInfo:
 
 
 class RegistryService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, queue: Any | None = None) -> None:
         self.session = session
+        self.queue = queue
 
     async def register(
         self, owner_id: str, agent_id: uuid.UUID, req: RegistrationRequest
     ) -> RegistrationStatus:
-        raise NotImplementedYet("registry.register")
+        agent = await AgentService(self.session).get_owned(owner_id, agent_id)
+        if agent.wallet_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "wallet_required"},
+            )
+        if agent.status != AgentStatus.PROVISIONING:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "agent_not_provisioning"},
+            )
+
+        agent.status = AgentStatus.REGISTERING
+        await self.session.flush()
+
+        queue = self.queue
+        if queue is None:
+            queue = await get_queue()
+        await queue.enqueue_job(REGISTER_AGENT, str(agent.id))
+
+        return await self.status(owner_id, agent_id)
 
     async def status(self, owner_id: str, agent_id: uuid.UUID) -> RegistrationStatus:
-        raise NotImplementedYet("registry.status")
+        agent = await AgentService(self.session).get_owned(owner_id, agent_id)
+        if agent.erc8004_agent_id is not None:
+            state = "registered"
+        elif agent.status == AgentStatus.REGISTERING:
+            state = "pending"
+        elif agent.status == AgentStatus.FAILED:
+            state = "failed"
+        else:
+            state = "not_registered"
+
+        tx_hash = agent.registration_tx_hash
+        explorer_url = f"{net.network().explorer_url}/tx/{tx_hash}" if tx_hash else None
+
+        return RegistrationStatus(
+            chain_id=net.chain_id(),
+            identity_registry=net.identity_registry(),
+            state=state,
+            erc8004_agent_id=agent.erc8004_agent_id,
+            agent_uri=agent.agent_uri,
+            tx_hash=tx_hash,
+            explorer_url=explorer_url,
+        )
 
     async def refresh_uri(self, owner_id: str, agent_id: uuid.UUID) -> RegistrationStatus:
-        """Push an updated profile with ``ERC8004Agent.set_agent_uri``."""
-        raise NotImplementedYet("registry.refresh_uri")
+        agent = await AgentService(self.session).get_owned(owner_id, agent_id)
+        if agent.erc8004_agent_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "not_registered"},
+            )
+
+        queue = self.queue
+        if queue is None:
+            queue = await get_queue()
+        await queue.enqueue_job(REGISTER_AGENT, str(agent.id))
+
+        return await self.status(owner_id, agent_id)

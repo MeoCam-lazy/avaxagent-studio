@@ -74,3 +74,12 @@ class FakeChainReader(ChainReader):
 
     def authorization_used(self, token: str, authorizer: str, nonce: bytes) -> bool:
         return (token.lower(), authorizer.lower(), nonce) in self.used_authorizations
+
+
+class FakeQueue:
+    def __init__(self) -> None:
+        self.enqueued: list[tuple[str, tuple, dict]] = []
+
+    async def enqueue_job(self, function: str, *args: Any, **kwargs: Any) -> None:
+        self.enqueued.append((function, args, kwargs))
+

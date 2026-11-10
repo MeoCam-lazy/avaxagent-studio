@@ -43,6 +43,8 @@ async def make_wallet(
     addr = kw.pop("address", f"0x{uuid.uuid4().hex.rjust(40, '0')[:40]}")
     wallet = Wallet(
         provider=kw.pop("provider", "turnkey"),
+        turnkey_sub_org_id=kw.pop("turnkey_sub_org_id", f"sub-org-{uuid.uuid4().hex[:8]}"),
+        turnkey_wallet_id=kw.pop("turnkey_wallet_id", f"wallet-{uuid.uuid4().hex[:8]}"),
         address=addr,
         chain_id=kw.pop("chain_id", 43113),
         policy=kw.pop("policy", {}),

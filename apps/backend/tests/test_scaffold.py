@@ -34,7 +34,16 @@ def test_fee_schedule(client):
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
-        ("post", f"/api/v1/agents/{uuid.uuid4()}/registration", {}),
+        (
+            "post",
+            "/api/v1/billing/payouts",
+            {
+                "agent_id": str(uuid.uuid4()),
+                "destination": "0x0000000000000000000000000000000000000000",
+                "amount_atomic": 100,
+            },
+        ),
+        ("get", "/api/v1/billing/payouts", None),
     ],
 )
 def test_scaffolded_endpoints_return_501(client, method, path, body):
