@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 
 from app.chain import commerce
@@ -29,32 +27,6 @@ def test_network_info_uses_sdk_addresses(client):
 
 def test_fee_schedule(client):
     assert client.get("/api/v1/billing/fees").json()["studio_fee_bps"] == 500
-
-
-@pytest.mark.parametrize(
-    ("method", "path", "body"),
-    [
-        (
-            "post",
-            "/api/v1/billing/payouts",
-            {
-                "agent_id": str(uuid.uuid4()),
-                "destination": "0x0000000000000000000000000000000000000000",
-                "amount_atomic": 100,
-            },
-        ),
-        ("get", "/api/v1/billing/payouts", None),
-    ],
-)
-def test_scaffolded_endpoints_return_501(client, method, path, body):
-    headers = auth_headers()
-    resp = (
-        getattr(client, method)(path, json=body, headers=headers)
-        if body is not None
-        else getattr(client, method)(path, headers=headers)
-    )
-    assert resp.status_code == 501, resp.text
-    assert resp.json()["error"] == "not_implemented"
 
 
 def test_create_agent_validates_slug(client):

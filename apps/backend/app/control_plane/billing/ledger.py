@@ -23,39 +23,73 @@ def studio_fee(amount: int) -> int:
 async def record_income(
     db: AsyncSession,
     *,
-    job: Job,
     amount: int,
     asset: str,
-    tx_hash: str | None,
+    job: Job | None = None,
+    agent_id: uuid.UUID | None = None,
+    chain_id: int | None = None,
+    tx_hash: str | None = None,
     log_index: int | None = None,
 ) -> None:
-    existing = await db.execute(
-        select(LedgerEntry).where(
-            LedgerEntry.job_id == job.id,
-            LedgerEntry.kind == LedgerKind.INCOME,
+    aid = job.agent_id if job is not None else agent_id
+    cid = job.chain_id if job is not None else chain_id
+    jid = job.id if job is not None else None
+
+    if aid is None or cid is None:
+        raise ValueError("agent_id and chain_id must be provided directly or via job")
+
+    if jid is not None:
+        existing = await db.execute(
+            select(LedgerEntry).where(
+                LedgerEntry.job_id == jid,
+                LedgerEntry.kind == LedgerKind.INCOME,
+            )
         )
-    )
-    if existing.scalar_one_or_none() is not None:
-        return
+        entry = existing.scalar_one_or_none()
+        if entry is not None:
+            if log_index is not None and entry.log_index is None:
+                entry.log_index = log_index
+                fee_res = await db.execute(
+                    select(LedgerEntry).where(
+                        LedgerEntry.job_id == jid,
+                        LedgerEntry.kind == LedgerKind.STUDIO_FEE,
+                    )
+                )
+                fee_entry = fee_res.scalar_one_or_none()
+                if fee_entry is not None:
+                    fee_entry.log_index = log_index
+                await db.flush()
+            return
+    elif tx_hash is not None and log_index is not None:
+        existing = await db.execute(
+            select(LedgerEntry).where(
+                LedgerEntry.chain_id == cid,
+                LedgerEntry.tx_hash == tx_hash,
+                LedgerEntry.log_index == log_index,
+                LedgerEntry.kind == LedgerKind.INCOME,
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            return
 
     income_entry = LedgerEntry(
-        agent_id=job.agent_id,
-        job_id=job.id,
+        agent_id=aid,
+        job_id=jid,
         kind=LedgerKind.INCOME,
         asset=asset,
         amount_atomic=amount,
-        chain_id=job.chain_id,
+        chain_id=cid,
         tx_hash=tx_hash,
         log_index=log_index,
     )
     fee = studio_fee(amount)
     fee_entry = LedgerEntry(
-        agent_id=job.agent_id,
-        job_id=job.id,
+        agent_id=aid,
+        job_id=jid,
         kind=LedgerKind.STUDIO_FEE,
         asset=asset,
         amount_atomic=fee,
-        chain_id=job.chain_id,
+        chain_id=cid,
         tx_hash=tx_hash,
         log_index=log_index,
     )

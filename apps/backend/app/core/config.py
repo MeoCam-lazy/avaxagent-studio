@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     payment_asset: str = "USDC"  # resolved per chain via avaxagent.networks
     studio_fee_bps: int = 500  # 5% studio fee on agent income
     studio_treasury_address: str | None = None
+    fee_sweep_min_atomic: int = 1_000_000
 
     # ── Wallets (Turnkey parent org; one sub-org per agent) ───────────────
     turnkey_organization_id: str | None = None
