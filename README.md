@@ -150,6 +150,7 @@ You can also run everything in Docker: `docker compose --profile apps up`.
 | `PAYMENT_ASSET` | `USDC` | Alias resolved per chain (USDC/EURC) |
 | `STUDIO_FEE_BPS` | `500` | 5% studio fee |
 | `STUDIO_TREASURY_ADDRESS` | empty | Wallet that receives fees |
+| `FEE_SWEEP_MIN_ATOMIC` | `1000000` | Minimum accumulated fee (1 USDC) before Settle Bot sweeps |
 | `TURNKEY_ORGANIZATION_ID`, `TURNKEY_API_PUBLIC_KEY`, `TURNKEY_API_PRIVATE_KEY` | empty | Parent org. Each agent gets its own sub-org |
 | `RELAYER_SIGN_WITH`, `RELAYER_ORGANIZATION_ID` | empty | Studio relayer wallet for x402 settlement |
 | `STORAGE_BACKEND` | `local` | `local`, `ipfs` or `s3` |
