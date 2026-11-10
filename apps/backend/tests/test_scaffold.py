@@ -36,7 +36,6 @@ def test_fee_schedule(client):
     [
         ("post", f"/api/v1/agents/{uuid.uuid4()}/wallet", None),
         ("post", f"/api/v1/agents/{uuid.uuid4()}/registration", {}),
-        ("get", "/api/v1/billing/summary", None),
     ],
 )
 def test_scaffolded_endpoints_return_501(client, method, path, body):
