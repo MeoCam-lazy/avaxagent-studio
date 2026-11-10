@@ -16,7 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chain import network as net
 from app.control_plane.agents.models import Agent
 from app.control_plane.billing.ledger import aggregate_balances, balances
-from app.control_plane.billing.models import LedgerEntry
+from app.control_plane.billing.models import (
+    LedgerEntry,
+    LedgerKind,
+    Payout,
+    PayoutStatus,
+)
 from app.control_plane.billing.schemas import (
     EarningsSummary,
     FeeSchedule,
@@ -25,7 +30,6 @@ from app.control_plane.billing.schemas import (
     PayoutRead,
 )
 from app.core.config import settings
-from app.core.errors import NotImplementedYet
 
 
 def fee_schedule() -> FeeSchedule:
@@ -96,7 +100,64 @@ class BillingService:
         return [LedgerEntryRead.model_validate(e) for e in entries]
 
     async def request_payout(self, owner_id: str, req: PayoutCreate) -> PayoutRead:
-        raise NotImplementedYet("billing.request_payout")
+        stmt = (
+            select(Agent)
+            .where(
+                Agent.id == req.agent_id,
+                Agent.owner_id == owner_id.lower(),
+                Agent.deleted_at.is_(None),
+            )
+            .with_for_update()
+        )
+        agent = (await self.session.execute(stmt)).scalar_one_or_none()
+        if agent is None:
+            raise HTTPException(status_code=404, detail={"error": "agent_not_found"})
 
-    async def list_payouts(self, owner_id: str) -> list[PayoutRead]:
-        raise NotImplementedYet("billing.list_payouts")
+        summary = await balances(self.session, req.agent_id)
+        if req.amount_atomic > summary.withdrawable_atomic:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "insufficient_balance",
+                    "withdrawable": summary.withdrawable_atomic,
+                },
+            )
+
+        payout = Payout(
+            agent_id=req.agent_id,
+            owner_id=owner_id.lower(),
+            destination=req.destination,
+            asset=settings.payment_asset,
+            amount_atomic=req.amount_atomic,
+            status=PayoutStatus.REQUESTED,
+        )
+        self.session.add(payout)
+
+        ledger_entry = LedgerEntry(
+            agent_id=req.agent_id,
+            job_id=None,
+            kind=LedgerKind.PAYOUT,
+            asset=settings.payment_asset,
+            amount_atomic=req.amount_atomic,
+            chain_id=agent.chain_id,
+            tx_hash=None,
+            log_index=None,
+        )
+        self.session.add(ledger_entry)
+        await self.session.commit()
+        await self.session.refresh(payout)
+
+        return PayoutRead.model_validate(payout)
+
+    async def list_payouts(
+        self, owner_id: str, agent_id: uuid.UUID | None = None
+    ) -> list[PayoutRead]:
+        stmt = (
+            select(Payout)
+            .where(Payout.owner_id == owner_id.lower())
+            .order_by(Payout.created_at.desc())
+        )
+        if agent_id is not None:
+            stmt = stmt.where(Payout.agent_id == agent_id)
+        res = await self.session.execute(stmt)
+        return [PayoutRead.model_validate(p) for p in res.scalars().all()]
