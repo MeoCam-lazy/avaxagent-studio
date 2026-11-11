@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from tests.conftest import TestSessionLocal
+from tests.fakes import FakeChainReader
 
 from app.core.config import settings
 from app.data_plane.indexer.models import IndexerCursor
 from app.data_plane.indexer.service import ChainIndexer
 from app.data_plane.indexer.streams import Stream
-from tests.conftest import TestSessionLocal
-from tests.fakes import FakeChainReader
 
 
 class DummyStream(Stream):
