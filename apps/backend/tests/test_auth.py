@@ -136,3 +136,16 @@ def test_expired_token_401(client: TestClient):
 def test_protected_route_requires_token(client: TestClient):
     res = client.get("/api/v1/agents")
     assert res.status_code == 401
+
+
+def test_prod_rejects_default_jwt_secret():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(environment="production", auth_jwt_secret="dev-insecure")
+
+    cfg = Settings(environment="production", auth_jwt_secret="super-strong-prod-secret-32b")
+    assert cfg.auth_jwt_secret == "super-strong-prod-secret-32b"

@@ -10,6 +10,7 @@ from app.core.config import settings
 #: arq function names, referenced by producers and registered in WorkerSettings.
 RUN_JOB = "run_job"
 REGISTER_AGENT = "register_agent"
+REFRESH_AGENT_URI = "refresh_agent_uri"
 
 
 def redis_settings() -> RedisSettings:

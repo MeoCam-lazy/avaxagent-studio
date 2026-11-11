@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from app.core.queue import redis_settings
-from app.data_plane.workers.tasks import register_agent, run_job
+from app.data_plane.workers.tasks import refresh_agent_uri, register_agent, run_job
 
 
 class WorkerSettings:
-    functions = [run_job, register_agent]  # names match app.core.queue constants
+    # Function names match app.core.queue constants
+    functions = [run_job, register_agent, refresh_agent_uri]
     redis_settings = redis_settings()
     max_jobs = 10
     job_timeout = 600  # seconds; LLM tasks can be slow

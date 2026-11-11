@@ -41,7 +41,7 @@ class AnthropicRunner:
         temperature: float,
     ) -> str:
         if not self.api_key:
-            raise FeatureDisabled("llm")
+            raise FeatureDisabled("llm", "LLM_API_KEY not configured")
 
         client = anthropic.AsyncAnthropic(api_key=self.api_key)
         kwargs: dict[str, Any] = {
@@ -63,5 +63,5 @@ class AnthropicRunner:
 def get_llm_runner() -> LlmRunner:
     """Return configured LLM runner or raise FeatureDisabled if LLM_API_KEY is missing."""
     if not settings.llm_api_key:
-        raise FeatureDisabled("llm")
+        raise FeatureDisabled("llm", "LLM_API_KEY not configured")
     return AnthropicRunner()
