@@ -1,4 +1,4 @@
-.PHONY: install infra api gateway indexer worker settler migrate revision test lint web web-build
+.PHONY: install infra api gateway indexer worker settler migrate revision test lint web web-build contracts-test contracts-deploy-fuji
 
 install:            ## Install Python workspace + frontend deps
 	uv sync --all-packages --all-extras
@@ -41,3 +41,9 @@ web:                ## Frontend dev server (http://localhost:5173)
 
 web-build:
 	pnpm build:web
+
+contracts-test:     ## Run Foundry tests for ERC-8183 contracts
+	cd contracts && forge test -vv
+
+contracts-deploy-fuji: ## Deploy ERC-8183 stack to Avalanche Fuji
+	cd contracts && forge script script/Deploy.s.sol:Deploy --rpc-url fuji --broadcast --verify

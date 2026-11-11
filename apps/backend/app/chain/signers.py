@@ -9,6 +9,7 @@ from avaxagent.wallets.turnkey import TurnkeyWalletProvider
 from app.chain.network import chain_id
 from app.control_plane.wallets.models import Wallet
 from app.core.config import settings
+from app.core.errors import FeatureDisabled
 
 
 def agent_signer(wallet: Wallet) -> WalletProvider:
@@ -28,4 +29,25 @@ def agent_signer(wallet: Wallet) -> WalletProvider:
         api_base_url=settings.turnkey_api_base_url,
         expected_chain_id=chain_id(),
         signing_policy=signing_policy,
+    )
+
+
+def relayer_signer() -> WalletProvider:
+    """Build a TurnkeyWalletProvider for the studio relayer / settle bot wallet."""
+    if (
+        not settings.relayer_organization_id
+        or not settings.relayer_sign_with
+        or not settings.turnkey_api_public_key
+        or not settings.turnkey_api_private_key
+    ):
+        raise FeatureDisabled("relayer", "RELAYER_* or TURNKEY_API_* not configured")
+
+    return TurnkeyWalletProvider(
+        organization_id=settings.relayer_organization_id,
+        sign_with=settings.relayer_sign_with,
+        api_public_key=settings.turnkey_api_public_key,
+        api_private_key=settings.turnkey_api_private_key,
+        api_base_url=settings.turnkey_api_base_url,
+        expected_chain_id=chain_id(),
+        signing_policy=SigningPolicy.strict_default(),
     )
