@@ -72,3 +72,11 @@ class MarketplaceAgent(BaseModel):
     chain_id: int
     erc8004_agent_id: int | None
     agent_card_url: str
+    a2a_url: str
+
+
+class MarketplaceAgentProfile(MarketplaceAgent):
+    """Public agent profile: the listing card plus track record."""
+
+    created_at: datetime
+    jobs_completed: int

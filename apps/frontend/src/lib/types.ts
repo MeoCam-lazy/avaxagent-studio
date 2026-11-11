@@ -17,6 +17,7 @@ export type AgentRead = Schemas["AgentRead"];
 export type AgentCreate = Schemas["AgentCreate"];
 export type AgentUpdate = Schemas["AgentUpdate"];
 export type MarketplaceAgent = Schemas["MarketplaceAgent"];
+export type MarketplaceAgentProfile = Schemas["MarketplaceAgentProfile"];
 
 export type WalletPolicy = Schemas["WalletPolicy"];
 export type Wallet = Schemas["WalletRead"];

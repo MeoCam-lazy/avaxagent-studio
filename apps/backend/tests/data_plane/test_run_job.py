@@ -234,3 +234,33 @@ async def test_running_state_is_visible_while_llm_runs(db: AsyncSession, monkeyp
 
     assert seen["status"] == JobStatus.RUNNING
     assert "llm_started" in seen["events"]
+
+
+@pytest.mark.asyncio
+async def test_a2a_parts_message_reaches_llm_as_text(db: AsyncSession, monkeypatch):
+    """A standard A2A ``message/send`` puts the text in ``message.parts[]``."""
+    fake_llm = FakeLlmRunner()
+    monkeypatch.setattr(worker_tasks, "get_llm_runner", lambda: fake_llm)
+
+    agent = await make_agent(db, status=AgentStatus.ACTIVE, slug="parts-agent")
+    job = await make_job(
+        db,
+        agent,
+        status=JobStatus.FUNDED,
+        settlement_mode=SettlementMode.X402,
+        request={
+            "message": {
+                "role": "user",
+                "messageId": "m-1",
+                "parts": [
+                    {"kind": "text", "text": "Summarize AVAX"},
+                    {"kind": "text", "text": "in one line"},
+                ],
+            }
+        },
+    )
+    await db.commit()
+
+    await worker_tasks.run_job({"session": db}, str(job.id))
+
+    assert fake_llm.calls[0]["prompt"] == "Summarize AVAX\nin one line"

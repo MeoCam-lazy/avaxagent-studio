@@ -9,6 +9,7 @@ from app.control_plane.agents.schemas import (
     AgentRead,
     AgentUpdate,
     MarketplaceAgent,
+    MarketplaceAgentProfile,
 )
 from app.control_plane.agents.service import AgentService
 from app.core.security import CurrentUser
@@ -53,3 +54,8 @@ async def marketplace_agents(
     offset: int = 0,
 ) -> list[MarketplaceAgent]:
     return await AgentService(db).marketplace(q, limit, offset)
+
+
+@marketplace_router.get("/agents/{slug}", response_model=MarketplaceAgentProfile)
+async def marketplace_agent(slug: str, db: DbSession) -> MarketplaceAgentProfile:
+    return await AgentService(db).marketplace_profile(slug)

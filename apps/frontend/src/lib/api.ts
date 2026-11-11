@@ -9,6 +9,7 @@ import type {
   JobEvent,
   LedgerEntry,
   MarketplaceAgent,
+  MarketplaceAgentProfile,
   NetworkInfo,
   NonceResponse,
   Payout,
@@ -151,6 +152,8 @@ export const api = {
     request<MarketplaceAgent[]>(
       `/marketplace/agents${q ? `?q=${encodeURIComponent(q)}` : ""}`,
     ),
+  marketplaceAgent: (slug: string) =>
+    request<MarketplaceAgentProfile>(`/marketplace/agents/${encodeURIComponent(slug)}`),
 
   billing: {
     fees: () => request<FeeSchedule>("/billing/fees"),
