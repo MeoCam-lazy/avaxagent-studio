@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
+import logging
 import time
 import uuid
 from typing import Any
@@ -32,6 +35,28 @@ from app.data_plane.gateway.x402 import (
     decode_payment,
     verify_payment,
 )
+from app.data_plane.storage.service import get_storage
+
+logger = logging.getLogger(__name__)
+
+
+async def _deliverable_artifact(uri: str) -> dict[str, Any]:
+    """A2A artifact for a stored deliverable, with its output as a text part.
+
+    The client who paid is not the agent owner, so ``tasks/get`` is how they
+    read the result. ``uri`` stays for clients that fetch it themselves; if
+    storage cannot be read the artifact still carries the URI.
+    """
+    artifact: dict[str, Any] = {"name": "deliverable", "uri": uri}
+    try:
+        content = await get_storage().download(uri)
+    except Exception:
+        logger.exception("deliverable download failed for %s", uri)
+        return artifact
+    output = content.get("output") if isinstance(content, dict) else None
+    text = output if isinstance(output, str) else json.dumps(content)
+    artifact["parts"] = [{"kind": "text", "text": text}]
+    return artifact
 
 
 async def handle_a2a(
@@ -96,7 +121,7 @@ async def handle_a2a(
 
         artifacts = []
         if job.deliverable_uri:
-            artifacts.append({"name": "deliverable", "uri": job.deliverable_uri})
+            artifacts.append(await _deliverable_artifact(job.deliverable_uri))
 
         result: dict[str, Any] = {
             "kind": "task",
@@ -231,9 +256,18 @@ async def handle_a2a(
 
     await queue.enqueue_job(RUN_JOB, str(job.id))
 
-    # Step 5: Return JSON-RPC response
+    # Step 5: Return JSON-RPC response, with the x402 settlement receipt.
+    receipt = {
+        "success": True,
+        "transaction": tx_hash,
+        "network": accept.network,
+        "payer": auth.from_,
+    }
     return JSONResponse(
         status_code=status.HTTP_200_OK,
+        headers={
+            "X-PAYMENT-RESPONSE": base64.b64encode(json.dumps(receipt).encode()).decode(),
+        },
         content={
             "jsonrpc": "2.0",
             "id": req.id,

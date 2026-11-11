@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import time
 from collections.abc import AsyncIterator
 
@@ -15,12 +17,12 @@ from tests.data_plane.test_x402_verify import _make_signed_payment
 from tests.factories import make_agent, make_job, make_wallet
 from tests.fakes import FakeChainReader, FakeQueue, FakeRelayer
 
-from app.chain.network import payment_asset_address
+from app.chain.network import caip2, payment_asset_address
 from app.chain.reader import get_chain_reader
 from app.control_plane.agents.models import AgentStatus
 from app.control_plane.billing.models import LedgerEntry, LedgerKind
 from app.control_plane.jobs.models import Job, JobEvent, JobStatus
-from app.core.config import SettlementMode
+from app.core.config import SettlementMode, settings
 from app.core.queue import get_queue
 from app.data_plane.gateway.main import app as gateway_app
 from app.data_plane.gateway.relayer import get_relayer
@@ -110,6 +112,15 @@ async def test_paid_call_creates_funded_job_and_enqueues(gateway_context, db: As
     result = body["result"]
     assert result["kind"] == "task"
     assert result["status"]["state"] == "submitted"
+
+    # x402 settlement receipt, readable cross-origin by the marketplace UI.
+    receipt = json.loads(base64.b64decode(res.headers["X-PAYMENT-RESPONSE"]))
+    assert receipt == {
+        "success": True,
+        "transaction": fake_relayer.tx_hash,
+        "network": caip2(),
+        "payer": signer.address,
+    }
 
     job_id = result["id"]
     job = (await db.execute(select(Job).where(Job.id == job_id))).scalar_one_or_none()
@@ -366,3 +377,86 @@ async def test_unknown_method_jsonrpc_error(gateway_context, db: AsyncSession):
     assert body["jsonrpc"] == "2.0"
     assert body["id"] == 99
     assert body["error"]["code"] == -32601
+
+
+@pytest.mark.asyncio
+async def test_tasks_get_returns_deliverable_text(
+    gateway_context, db: AsyncSession, monkeypatch, tmp_path
+):
+    """The payer is not the agent owner, so tasks/get is how they read the result."""
+    from avaxagent.storage import LocalStorageProvider
+
+    storage = LocalStorageProvider(base_dir=str(tmp_path))
+    monkeypatch.setattr("app.data_plane.gateway.a2a.get_storage", lambda: storage)
+    uri = await storage.upload({"job_id": "x", "agent": "a", "output": "the answer"}, "job-x")
+
+    client, _, _, _ = gateway_context
+    agent = await make_agent(db, status=AgentStatus.ACTIVE)
+    job = await make_job(
+        db,
+        agent,
+        status=JobStatus.SETTLED,
+        settlement_mode=SettlementMode.X402,
+        deliverable_uri=uri,
+    )
+    res = await client.post(
+        f"/agents/{agent.slug}/a2a",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tasks/get", "params": {"id": str(job.id)}},
+    )
+    artifact = res.json()["result"]["artifacts"][0]
+    assert artifact["uri"] == uri
+    assert artifact["parts"] == [{"kind": "text", "text": "the answer"}]
+
+
+@pytest.mark.asyncio
+async def test_tasks_get_storage_failure_keeps_uri(gateway_context, db: AsyncSession, monkeypatch):
+    class BrokenStorage:
+        async def download(self, uri: str):
+            raise OSError("gone")
+
+    monkeypatch.setattr("app.data_plane.gateway.a2a.get_storage", lambda: BrokenStorage())
+    client, _, _, _ = gateway_context
+    agent = await make_agent(db, status=AgentStatus.ACTIVE)
+    job = await make_job(
+        db,
+        agent,
+        status=JobStatus.SETTLED,
+        settlement_mode=SettlementMode.X402,
+        deliverable_uri="file:///missing.json",
+    )
+    res = await client.post(
+        f"/agents/{agent.slug}/a2a",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tasks/get", "params": {"id": str(job.id)}},
+    )
+    assert res.status_code == 200
+    artifact = res.json()["result"]["artifacts"][0]
+    assert artifact["uri"] == "file:///missing.json"
+    assert "parts" not in artifact
+
+
+@pytest.mark.asyncio
+async def test_browser_can_call_gateway_cross_origin(gateway_context, db: AsyncSession):
+    """The marketplace UI (studio origin) pays agents directly from the browser."""
+    client, _, _, _ = gateway_context
+    agent = await make_agent(db, status=AgentStatus.ACTIVE)
+    origin = settings.cors_origins[0]
+
+    pre = await client.options(
+        f"/agents/{agent.slug}/a2a",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,x-payment",
+        },
+    )
+    assert pre.status_code == 200
+    assert pre.headers["access-control-allow-origin"] == origin
+    assert "x-payment" in pre.headers["access-control-allow-headers"].lower()
+
+    res = await client.post(
+        f"/agents/{agent.slug}/a2a",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tasks/get", "params": {}},
+        headers={"Origin": origin},
+    )
+    assert res.headers["access-control-allow-origin"] == origin
+    assert "x-payment-response" in res.headers["access-control-expose-headers"].lower()

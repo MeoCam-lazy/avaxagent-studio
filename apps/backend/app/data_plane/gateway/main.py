@@ -8,9 +8,11 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.chain import network as net
 from app.chain.reader import ChainReader, get_chain_reader
+from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.queue import get_queue
 from app.data_plane.gateway import service
@@ -19,6 +21,15 @@ from app.data_plane.gateway.schemas import JsonRpcRequest
 from app.db.session import DbSession
 
 app = FastAPI(title="Avaxagent Studio A2A Gateway", version="0.1.0")
+# The studio marketplace pays agents straight from the browser: it reads the
+# 402 challenge and resends the call with the signed ``X-PAYMENT`` header.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-PAYMENT"],
+    expose_headers=["X-PAYMENT-RESPONSE"],
+)
 register_exception_handlers(app)
 
 
