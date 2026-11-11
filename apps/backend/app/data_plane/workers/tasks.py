@@ -131,8 +131,11 @@ async def register_agent(ctx: dict[str, Any], agent_id: str) -> None:
         await _register_agent_with_session(session, agent_id)
     else:
         async with SessionLocal() as db:
-            await _register_agent_with_session(db, agent_id)
-            await db.commit()
+            try:
+                await _register_agent_with_session(db, agent_id)
+            finally:
+                # Commit on failure too, so the FAILED status is visible and retryable.
+                await db.commit()
 
 
 async def _register_agent_with_session(db: AsyncSession, agent_id: str) -> None:
@@ -168,6 +171,6 @@ async def _register_agent_with_session(db: AsyncSession, agent_id: str) -> None:
         agent.status = AgentStatus.ACTIVE
         await db.flush()
     except Exception as e:
-        agent.status = AgentStatus.PROVISIONING
+        agent.status = AgentStatus.FAILED
         await db.flush()
         raise e

@@ -126,3 +126,45 @@ async def test_wallet_other_owner_404(api: httpx.AsyncClient, db: AsyncSession):
 
     res_bal = await api.get(f"/api/v1/agents/{other_agent.id}/wallet/balances")
     assert res_bal.status_code == 404
+
+
+async def _committed_agent(agent_id):
+    """Read the agent the way the next HTTP request would: a fresh session."""
+    from tests.conftest import TestSessionLocal
+
+    from app.control_plane.agents.models import Agent
+
+    async with TestSessionLocal() as s:
+        return await s.get(Agent, agent_id)
+
+
+@pytest.mark.asyncio
+async def test_provision_is_committed(api: httpx.AsyncClient, db: AsyncSession):
+    agent = await make_agent(db, status=AgentStatus.DRAFT)
+    await db.commit()
+
+    res = await api.post(f"/api/v1/agents/{agent.id}/wallet")
+    assert res.status_code == 201
+
+    saved = await _committed_agent(agent.id)
+    assert saved.status == AgentStatus.PROVISIONING
+    assert str(saved.wallet_id) == res.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_policy_update_is_committed(api: httpx.AsyncClient, db: AsyncSession):
+    from tests.conftest import TestSessionLocal
+
+    from app.control_plane.wallets.models import Wallet
+
+    agent = await make_agent(db, status=AgentStatus.DRAFT)
+    await db.commit()
+    wallet_id = (await api.post(f"/api/v1/agents/{agent.id}/wallet")).json()["id"]
+
+    policy = {"max_value_per_call_atomic": 7, "daily_budget_atomic": 70}
+    res = await api.put(f"/api/v1/agents/{agent.id}/wallet/policy", json=policy)
+    assert res.status_code == 200
+
+    async with TestSessionLocal() as s:
+        saved = await s.get(Wallet, __import__("uuid").UUID(wallet_id))
+    assert saved.policy["max_value_per_call_atomic"] == 7

@@ -67,6 +67,12 @@ export class ApiError extends Error {
     this.body = body;
   }
 
+  /** Machine-readable error code from the backend body (`{"error": "slug_taken"}`). */
+  get code(): string | undefined {
+    const body = this.body as { error?: unknown } | null;
+    return typeof body?.error === "string" ? body.error : undefined;
+  }
+
   /** Backend route exists but has no logic yet (scaffold → HTTP 501). */
   get notImplemented() {
     return this.status === 501;
