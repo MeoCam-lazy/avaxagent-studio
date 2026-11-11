@@ -3,9 +3,11 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.control_plane.billing.models import LedgerEntry, LedgerKind
+from app.control_plane.agents.models import Agent
+from app.control_plane.billing.models import LedgerEntry, LedgerKind, Payout, PayoutStatus
 from app.control_plane.jobs.models import Job, JobStatus
 from app.core.config import SettlementMode
+from tests.conftest import TestSessionLocal
 from tests.factories import make_agent
 
 
@@ -80,3 +82,30 @@ async def test_token_amount_roundtrip(db):
     await db.refresh(agent)
 
     assert agent.price_atomic == big_val
+
+
+@pytest.mark.asyncio
+async def test_token_amounts_load_as_exact_ints(db):
+    """``Mapped[int]`` amounts must load as ``int``, not ``Decimal``.
+
+    web3 rejects ``Decimal`` for ``uint256``, so a ``Decimal`` amount made every
+    on-chain payout fail (found by the Fuji end-to-end suite).
+    """
+    agent = await make_agent(db, slug="int-agent", price_atomic=2**255 + 1)
+    payout = Payout(
+        agent_id=agent.id,
+        owner_id=agent.owner_id,
+        destination="0x" + "b" * 40,
+        asset="0x5425890298aed601595a70AB815c96711a31Bc65",
+        amount_atomic=10**30 + 1,
+        status=PayoutStatus.REQUESTED,
+    )
+    db.add(payout)
+    await db.commit()
+
+    async with TestSessionLocal() as fresh:
+        loaded = await fresh.get(Payout, payout.id)
+        loaded_agent = await fresh.get(Agent, agent.id)
+
+    assert type(loaded.amount_atomic) is int and loaded.amount_atomic == 10**30 + 1
+    assert type(loaded_agent.price_atomic) is int and loaded_agent.price_atomic == 2**255 + 1
