@@ -95,3 +95,56 @@ async def test_limit_capped_200(api: httpx.AsyncClient, db: AsyncSession):
     res_capped = await api.get("/api/v1/jobs?limit=200")
     assert res_capped.status_code == 200
     assert len(res_capped.json()) == 5
+
+
+@pytest.mark.asyncio
+async def test_deliverable_returns_stored_content(
+    api: httpx.AsyncClient, db: AsyncSession, monkeypatch, tmp_path
+):
+    from avaxagent.storage import LocalStorageProvider
+
+    storage = LocalStorageProvider(base_dir=str(tmp_path))
+    monkeypatch.setattr("app.control_plane.jobs.service.get_storage", lambda: storage)
+    content = {"job_id": "x", "agent": "a", "output": "the answer"}
+    uri = await storage.upload(content, filename="job-x")
+
+    agent = await make_agent(db, slug="deliv-agent")
+    job = await make_job(
+        db, agent, status=JobStatus.SETTLED, deliverable_uri=uri, deliverable_hash="0x" + "1" * 64
+    )
+
+    res = await api.get(f"/api/v1/jobs/{job.id}/deliverable")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["content"] == content
+    assert body["uri"] == uri
+    assert body["hash"] == "0x" + "1" * 64
+
+
+@pytest.mark.asyncio
+async def test_deliverable_not_ready_404(api: httpx.AsyncClient, db: AsyncSession):
+    agent = await make_agent(db, slug="deliv-pending")
+    job = await make_job(db, agent, status=JobStatus.RUNNING)
+
+    res = await api.get(f"/api/v1/jobs/{job.id}/deliverable")
+    assert res.status_code == 404
+    assert res.json() == {"error": "deliverable_not_ready"}
+
+
+@pytest.mark.asyncio
+async def test_deliverable_other_owner_404(api: httpx.AsyncClient, db: AsyncSession):
+    other = await make_agent(db, owner_id="0x" + "98" * 20, slug="deliv-other")
+    job = await make_job(db, other, deliverable_uri="file:///nope.json")
+
+    res = await api.get(f"/api/v1/jobs/{job.id}/deliverable")
+    assert res.status_code == 404
+    assert res.json() == {"error": "job_not_found"}
+
+
+@pytest.mark.asyncio
+async def test_job_read_includes_request_input(api: httpx.AsyncClient, db: AsyncSession):
+    agent = await make_agent(db, slug="req-agent")
+    job = await make_job(db, agent, request={"message": "summarize this"})
+
+    res = await api.get(f"/api/v1/jobs/{job.id}")
+    assert res.json()["request"] == {"message": "summarize this"}

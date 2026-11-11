@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import HTTPException
@@ -8,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.control_plane.agents.models import Agent
 from app.control_plane.jobs.models import Job, JobEvent, JobStatus
-from app.control_plane.jobs.schemas import JobEventRead, JobRead
+from app.control_plane.jobs.schemas import JobDeliverable, JobEventRead, JobRead
+from app.data_plane.storage.service import get_storage
+
+log = logging.getLogger(__name__)
 
 
 class JobService:
@@ -45,6 +49,23 @@ class JobService:
         return [JobRead.model_validate(j) for j in jobs]
 
     async def get(self, owner_id: str, job_id: uuid.UUID) -> JobRead:
+        return JobRead.model_validate(await self._get_owned(owner_id, job_id))
+
+    async def deliverable(self, owner_id: str, job_id: uuid.UUID) -> JobDeliverable:
+        """Stored deliverable for the owner; file:// and ipfs:// URIs are not browser-readable."""
+        job = await self._get_owned(owner_id, job_id)
+        if not job.deliverable_uri:
+            raise HTTPException(status_code=404, detail={"error": "deliverable_not_ready"})
+        try:
+            content = await get_storage().download(job.deliverable_uri)
+        except Exception:
+            log.exception("deliverable download failed for job %s", job.id)
+            raise HTTPException(
+                status_code=502, detail={"error": "deliverable_unavailable"}
+            ) from None
+        return JobDeliverable(uri=job.deliverable_uri, hash=job.deliverable_hash, content=content)
+
+    async def _get_owned(self, owner_id: str, job_id: uuid.UUID) -> Job:
         stmt = (
             select(Job)
             .join(Agent, Job.agent_id == Agent.id)
@@ -58,10 +79,10 @@ class JobService:
         job = res.scalar_one_or_none()
         if job is None:
             raise HTTPException(status_code=404, detail={"error": "job_not_found"})
-        return JobRead.model_validate(job)
+        return job
 
     async def events(self, owner_id: str, job_id: uuid.UUID) -> list[JobEventRead]:
-        await self.get(owner_id, job_id)
+        await self._get_owned(owner_id, job_id)
 
         stmt = (
             select(JobEvent).where(JobEvent.job_id == job_id).order_by(JobEvent.created_at.asc())

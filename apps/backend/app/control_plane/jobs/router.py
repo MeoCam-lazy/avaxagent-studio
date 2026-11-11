@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Query
 
 from app.control_plane.jobs.models import JobStatus
-from app.control_plane.jobs.schemas import JobEventRead, JobRead
+from app.control_plane.jobs.schemas import JobDeliverable, JobEventRead, JobRead
 from app.control_plane.jobs.service import JobService
 from app.core.security import CurrentUser
 from app.db.session import DbSession
@@ -33,3 +33,8 @@ async def get_job(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> JobRea
 @router.get("/{job_id}/events", response_model=list[JobEventRead])
 async def job_events(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> list[JobEventRead]:
     return await JobService(db).events(user.id, job_id)
+
+
+@router.get("/{job_id}/deliverable", response_model=JobDeliverable)
+async def job_deliverable(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> JobDeliverable:
+    return await JobService(db).deliverable(user.id, job_id)
