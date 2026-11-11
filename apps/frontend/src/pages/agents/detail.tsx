@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { QueryState } from "@/components/query-state";
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { needsSetup } from "@/lib/agent-setup";
 import { api } from "@/lib/api";
 import { formatAtomic, shortAddress } from "@/lib/format";
 
@@ -19,7 +22,19 @@ export function AgentDetailPage() {
 
   return (
     <>
-      <PageHeader title="Agent" description={id} />
+      <PageHeader
+        title="Agent"
+        description={id}
+        actions={
+          agent.data && needsSetup(agent.data) ? (
+            <Button asChild>
+              <Link to={`/agents/new?id=${id}`}>
+                Tiếp tục thiết lập <ArrowRight />
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Card>
         <CardHeader>

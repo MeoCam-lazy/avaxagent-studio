@@ -13,13 +13,16 @@ export function AppShell() {
     <div className="flex min-h-svh">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end gap-2 border-b px-6">
+        <header className="flex h-14 items-center justify-end gap-2 border-b px-4 sm:px-6">
           {net ? (
             <>
-              <Badge variant="outline">
+              <Badge variant="outline" className="hidden sm:inline-flex">
                 {CHAIN_NAMES[net.chain_id] ?? net.network} · {net.chain_id}
               </Badge>
-              <Badge variant={net.erc8183_enabled ? "default" : "secondary"}>
+              <Badge
+                variant={net.erc8183_enabled ? "default" : "secondary"}
+                className="hidden sm:inline-flex"
+              >
                 ERC-8183 {net.erc8183_enabled ? "on" : "off (x402)"}
               </Badge>
             </>
@@ -28,7 +31,7 @@ export function AppShell() {
           )}
           <ConnectButton />
         </header>
-        <main className="flex-1 space-y-6 p-6">
+        <main className="flex-1 space-y-6 p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
