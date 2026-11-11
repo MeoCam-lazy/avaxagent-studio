@@ -333,6 +333,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/deliverable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Job Deliverable */
+        get: operations["job_deliverable_api_v1_jobs__job_id__deliverable_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -472,6 +489,17 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** JobDeliverable */
+        JobDeliverable: {
+            /** Uri */
+            uri: string;
+            /** Hash */
+            hash: string | null;
+            /** Content */
+            content: {
+                [key: string]: unknown;
+            };
+        };
         /** JobEventRead */
         JobEventRead: {
             /**
@@ -517,8 +545,14 @@ export interface components {
             amount_atomic: number;
             /** Asset */
             asset: string;
+            /** Request */
+            request: {
+                [key: string]: unknown;
+            };
             /** Deliverable Uri */
             deliverable_uri: string | null;
+            /** Deliverable Hash */
+            deliverable_hash: string | null;
             /** Payment Tx Hash */
             payment_tx_hash: string | null;
             /** Submit Tx Hash */
@@ -1550,6 +1584,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobEventRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_deliverable_api_v1_jobs__job_id__deliverable_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobDeliverable"];
                 };
             };
             /** @description Validation Error */

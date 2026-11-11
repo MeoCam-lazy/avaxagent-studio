@@ -39,6 +39,7 @@ export type Job = Schemas["JobRead"];
 export type JobRead = Schemas["JobRead"];
 export type JobEvent = Schemas["JobEventRead"];
 export type JobEventRead = Schemas["JobEventRead"];
+export type JobDeliverable = Schemas["JobDeliverable"];
 
 export type NonceResponse = Schemas["NonceResponse"];
 export type VerifyRequest = Schemas["VerifyRequest"];
