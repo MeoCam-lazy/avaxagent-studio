@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatAtomic, parseAtomic, shortAddress } from "@/lib/format";
+import { assetLabel, formatAtomic, parseAtomic, shortAddress } from "@/lib/format";
 
 describe("formatAtomic", () => {
   it("formats standard 6-decimal atomic values", () => {
@@ -45,5 +45,18 @@ describe("parseAtomic", () => {
     for (const bad of ["", ".", "-1", "1e3", "abc", "1,5", "1.2.3"]) {
       expect(() => parseAtomic(bad), bad).toThrow();
     }
+  });
+});
+
+describe("assetLabel", () => {
+  const net = { payment_asset: "USDC", payment_asset_address: "0x5425890298aed601595a70AB815c96711a31Bc65" };
+
+  it("names the network payment token regardless of address case", () => {
+    expect(assetLabel("0x5425890298AED601595A70AB815C96711A31BC65", net)).toBe("USDC");
+  });
+
+  it("shortens unknown tokens and works before the network loads", () => {
+    expect(assetLabel("0x00000000000000000000000000000000000000ee", net)).toBe("0x0000…00ee");
+    expect(assetLabel("0x5425890298aed601595a70AB815c96711a31Bc65")).toBe("0x5425…Bc65");
   });
 });

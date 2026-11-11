@@ -6,6 +6,7 @@ import { AgentDetailPage } from "@/pages/agents/detail";
 import { AgentsListPage } from "@/pages/agents/list";
 import { NewAgentPage } from "@/pages/agents/new";
 import { DashboardPage } from "@/pages/dashboard";
+import { JobDetailPage } from "@/pages/job-detail";
 import { JobsPage } from "@/pages/jobs";
 import { MarketplacePage } from "@/pages/marketplace";
 import { NotFoundPage } from "@/pages/not-found";
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
           { path: "agents/:id", element: <AgentDetailPage /> },
           { path: "wallet", element: <WalletPage /> },
           { path: "jobs", element: <JobsPage /> },
+          { path: "jobs/:id", element: <JobDetailPage /> },
         ],
       },
       { path: "marketplace", element: <MarketplacePage /> },

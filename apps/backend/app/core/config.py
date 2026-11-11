@@ -97,13 +97,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_prod_jwt_secret(self) -> Settings:
-        if (
-            self.environment.lower() != "development"
-            and (not self.auth_jwt_secret or self.auth_jwt_secret in _DEV_JWT_SECRETS)
+        if self.environment.lower() != "development" and (
+            not self.auth_jwt_secret or self.auth_jwt_secret in _DEV_JWT_SECRETS
         ):
-            raise ValueError(
-                "AUTH_JWT_SECRET must be set to a strong secret outside development"
-            )
+            raise ValueError("AUTH_JWT_SECRET must be set to a strong secret outside development")
         return self
 
     @property

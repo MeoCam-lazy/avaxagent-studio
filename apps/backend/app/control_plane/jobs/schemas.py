@@ -21,7 +21,9 @@ class JobRead(BaseModel):
     client_address: str | None
     amount_atomic: int
     asset: str
+    request: dict
     deliverable_uri: str | None
+    deliverable_hash: str | None
     payment_tx_hash: str | None
     submit_tx_hash: str | None
     settle_tx_hash: str | None
@@ -38,3 +40,9 @@ class JobEventRead(BaseModel):
     message: str
     data: dict
     created_at: datetime
+
+
+class JobDeliverable(BaseModel):
+    uri: str
+    hash: str | None
+    content: dict

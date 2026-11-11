@@ -35,3 +35,14 @@ export const CHAIN_NAMES: Record<number, string> = {
   43113: "Avalanche Fuji",
   43114: "Avalanche C-Chain",
 };
+
+/** Symbol for the network's payment token, otherwise the short token address. */
+export function assetLabel(
+  asset: string,
+  network?: { payment_asset: string; payment_asset_address: string },
+): string {
+  if (network && asset.toLowerCase() === network.payment_asset_address.toLowerCase()) {
+    return network.payment_asset;
+  }
+  return shortAddress(asset);
+}

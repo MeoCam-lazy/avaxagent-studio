@@ -5,6 +5,7 @@ import type {
   EarningsSummary,
   FeeSchedule,
   Job,
+  JobDeliverable,
   JobEvent,
   LedgerEntry,
   MarketplaceAgent,
@@ -163,5 +164,6 @@ export const api = {
     list: () => request<Job[]>("/jobs"),
     get: (id: string) => request<Job>(`/jobs/${id}`),
     events: (id: string) => request<JobEvent[]>(`/jobs/${id}/events`),
+    deliverable: (id: string) => request<JobDeliverable>(`/jobs/${id}/deliverable`),
   },
 };

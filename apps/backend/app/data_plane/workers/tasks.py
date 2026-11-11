@@ -79,7 +79,9 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
 
     job.status = JobStatus.RUNNING
     await add_event(db, job, "llm_started")
-    await db.flush()
+    # Commit now: the LLM call can take a while and the job log polls from
+    # another session, which would otherwise see "funded" until the end.
+    await db.commit()
 
     try:
         prompt = _extract_prompt(job.request)

@@ -202,3 +202,35 @@ async def test_anthropic_runner_shape(monkeypatch):
         system="System instruction",
         messages=[{"role": "user", "content": "User prompt"}],
     )
+
+
+@pytest.mark.asyncio
+async def test_running_state_is_visible_while_llm_runs(db: AsyncSession, monkeypatch):
+    """The arq worker passes no session; the live timeline polls from another one."""
+    from tests.conftest import TestSessionLocal
+
+    seen: dict = {}
+
+    class PeekingLlm(FakeLlmRunner):
+        async def complete(self, **kw) -> str:
+            async with TestSessionLocal() as s:
+                job = await s.get(Job, job_id)
+                events = (
+                    (await s.execute(select(JobEvent).where(JobEvent.job_id == job_id)))
+                    .scalars()
+                    .all()
+                )
+                seen["status"] = job.status
+                seen["events"] = [e.type for e in events]
+            return await super().complete(**kw)
+
+    monkeypatch.setattr(worker_tasks, "get_llm_runner", lambda: PeekingLlm())
+    monkeypatch.setattr(worker_tasks, "SessionLocal", TestSessionLocal)
+    agent = await make_agent(db, status=AgentStatus.ACTIVE, slug="peek-agent")
+    job = await make_job(db, agent, status=JobStatus.FUNDED, request={"message": "hi"})
+    job_id = job.id
+
+    await worker_tasks.run_job({}, str(job_id))
+
+    assert seen["status"] == JobStatus.RUNNING
+    assert "llm_started" in seen["events"]
