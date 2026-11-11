@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -19,7 +19,8 @@ from app.chain import network as net
 from app.chain.reader import ChainReader
 from app.core.config import settings
 from app.data_plane.indexer.models import IndexerCursor
-from app.data_plane.indexer.streams import Stream, streams as default_streams
+from app.data_plane.indexer.streams import Stream
+from app.data_plane.indexer.streams import streams as default_streams
 
 log = logging.getLogger(__name__)
 

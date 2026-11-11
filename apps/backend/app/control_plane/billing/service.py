@@ -12,6 +12,7 @@ import uuid
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from web3 import Web3
 
 from app.chain import network as net
 from app.control_plane.agents.models import Agent
@@ -115,6 +116,7 @@ class BillingService:
 
         summary = await balances(self.session, req.agent_id)
         if req.amount_atomic > summary.withdrawable_atomic:
+            await self.session.rollback()  # release the row lock now
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -123,25 +125,30 @@ class BillingService:
                 },
             )
 
+        # The executor transfers ``asset``, so it must be the token address,
+        # not the ``PAYMENT_ASSET`` alias ("USDC").
+        asset = net.payment_asset_address()
         payout = Payout(
             agent_id=req.agent_id,
             owner_id=owner_id.lower(),
-            destination=req.destination,
-            asset=settings.payment_asset,
+            destination=Web3.to_checksum_address(req.destination),
+            asset=asset,
             amount_atomic=req.amount_atomic,
             status=PayoutStatus.REQUESTED,
         )
         self.session.add(payout)
+        await self.session.flush()
 
         ledger_entry = LedgerEntry(
             agent_id=req.agent_id,
             job_id=None,
             kind=LedgerKind.PAYOUT,
-            asset=settings.payment_asset,
+            asset=asset,
             amount_atomic=req.amount_atomic,
             chain_id=agent.chain_id,
             tx_hash=None,
             log_index=None,
+            payout_id=payout.id,
         )
         self.session.add(ledger_entry)
         await self.session.commit()

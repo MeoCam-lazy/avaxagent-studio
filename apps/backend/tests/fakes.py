@@ -107,3 +107,32 @@ class FakeRelayer:
         if self.should_fail:
             raise RuntimeError("settlement reverted")
         return self.tx_hash
+
+
+class FakeTokenSender:
+    """Scripted ``TokenSender``: ``mode`` is "ok", "revert" or "pending"."""
+
+    def __init__(
+        self, tx_hash: str = "0x" + "bb" * 32, mode: str = "ok", gas_cost_wei: int = 10**15
+    ) -> None:
+        self.tx_hash = tx_hash
+        self.mode = mode
+        self.gas_cost_wei = gas_cost_wei
+        self.calls: list[tuple[str, str, str, int]] = []
+        self.receipts: dict[str, int] = {}
+
+    def transfer(self, wallet: Any, token: str, to: str, amount: int) -> str:
+        from app.data_plane.settler.transfers import TransferPending
+
+        self.calls.append((wallet.address, token, to, amount))
+        if self.mode == "revert":
+            raise RuntimeError("Transaction reverted on-chain")
+        if self.mode == "pending":
+            raise TransferPending(self.tx_hash)
+        return self.tx_hash
+
+    def receipt_status(self, tx_hash: str) -> int | None:
+        return self.receipts.get(tx_hash)
+
+    def estimate_gas_cost_wei(self, wallet: Any, token: str, to: str, amount: int) -> int:
+        return self.gas_cost_wei

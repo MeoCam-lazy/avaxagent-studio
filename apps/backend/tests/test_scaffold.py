@@ -65,5 +65,6 @@ def test_metadata_contains_all_tables():
         "job_events",
         "ledger_entries",
         "payouts",
+        "fee_sweeps",
         "indexer_cursors",
     }

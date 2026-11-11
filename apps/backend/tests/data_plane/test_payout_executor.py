@@ -4,172 +4,177 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.conftest import TestSessionLocal
+from tests.factories import make_agent, make_job, make_wallet
+from tests.fakes import FakeTokenSender
 
-from app.control_plane.agents.models import Agent, AgentStatus
-from app.control_plane.billing.ledger import balances
+from app.control_plane.billing.ledger import balances, record_income
 from app.control_plane.billing.models import LedgerEntry, LedgerKind, Payout, PayoutStatus
-from app.control_plane.wallets.models import Wallet
+from app.control_plane.billing.schemas import PayoutCreate
+from app.control_plane.billing.service import BillingService
 from app.data_plane.settler.payouts import PayoutExecutor
+
+DEST = "0x1111111111111111111111111111111111111111"
+USDC = "0x5425890298aed601595a70AB815c96711a31Bc65"
+
+
+async def _requested_payout(db: AsyncSession, amount: int = 500_000, with_wallet: bool = True):
+    """Agent with 1 USDC income (950_000 withdrawable) and one requested payout."""
+    wallet = await make_wallet(db) if with_wallet else None
+    agent = await make_agent(db, wallet_id=wallet.id if wallet else None)
+    job = await make_job(db, agent)
+    await record_income(db, job=job, amount=1_000_000, asset=USDC, tx_hash=None)
+    await db.commit()
+    read = await BillingService(db).request_payout(
+        agent.owner_id, PayoutCreate(agent_id=agent.id, destination=DEST, amount_atomic=amount)
+    )
+    return wallet, read.id
+
+
+async def _state(payout_id):
+    async with TestSessionLocal() as s:
+        payout = await s.get(Payout, payout_id)
+        ledger = (
+            await s.execute(select(LedgerEntry).where(LedgerEntry.payout_id == payout_id))
+        ).scalar_one_or_none()
+        bal = await balances(s, payout.agent_id)
+        return payout, ledger, bal
 
 
 @pytest.mark.asyncio
 async def test_executor_submits_and_confirms(db: AsyncSession):
-    wallet = Wallet(address="0x" + "11" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    wallet, payout_id = await _requested_payout(db)
+    sender = FakeTokenSender()
 
-    agent = Agent(
-        owner_id="0x" + "aa" * 20,
-        slug="agent-exec-1",
-        name="Agent Exec 1",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
+    await PayoutExecutor(TestSessionLocal, sender).tick()
 
-    payout = Payout(
-        agent_id=agent.id,
-        owner_id=agent.owner_id,
-        destination="0x" + "22" * 20,
-        asset="USDC",
-        amount_atomic=500_000,
-        status=PayoutStatus.REQUESTED,
-    )
-    db.add(payout)
+    payout, ledger, bal = await _state(payout_id)
+    assert payout.status == PayoutStatus.CONFIRMED
+    assert payout.tx_hash == sender.tx_hash
+    assert sender.calls == [(wallet.address, payout.asset, DEST, 500_000)]
+    assert ledger.kind == LedgerKind.PAYOUT
+    assert ledger.tx_hash == sender.tx_hash
+    assert bal.paid_out_atomic == 500_000
+    assert bal.withdrawable_atomic == 450_000
 
-    ledger_entry = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.PAYOUT,
-        asset="USDC",
-        amount_atomic=500_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(ledger_entry)
-    await db.commit()
-
-    called = []
-
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "ff" * 32
-
-    executor = PayoutExecutor(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-    )
-
-    processed = await executor.tick()
-    assert processed == 1
-    assert len(called) == 1
-    assert called[0] == (wallet.address, "0x" + "22" * 20, 500_000)
-
-    async with TestSessionLocal() as s:
-        p = await s.get(Payout, payout.id)
-        assert p.status == PayoutStatus.CONFIRMED
-        assert p.tx_hash == "0x" + "ff" * 32
-
-        entries = (
-            (
-                await s.execute(
-                    select(LedgerEntry).where(
-                        LedgerEntry.agent_id == agent.id,
-                        LedgerEntry.kind == LedgerKind.PAYOUT,
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
-        assert len(entries) == 1
-        assert entries[0].tx_hash == "0x" + "ff" * 32
+    # A confirmed payout is never sent again.
+    await PayoutExecutor(TestSessionLocal, sender).tick()
+    assert len(sender.calls) == 1
 
 
 @pytest.mark.asyncio
 async def test_executor_failure_restores_balance(db: AsyncSession):
-    wallet = Wallet(address="0x" + "33" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    _, payout_id = await _requested_payout(db)
+    sender = FakeTokenSender(mode="revert")
 
-    agent = Agent(
-        owner_id="0x" + "bb" * 20,
-        slug="agent-exec-2",
-        name="Agent Exec 2",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
+    await PayoutExecutor(TestSessionLocal, sender).tick()
 
-    # Initial gross income: 1_000_000
-    income = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.INCOME,
-        asset="USDC",
-        amount_atomic=1_000_000,
-        chain_id=43113,
-        tx_hash="0x" + "11" * 32,
-    )
-    db.add(income)
+    payout, ledger, bal = await _state(payout_id)
+    assert payout.status == PayoutStatus.FAILED
+    assert ledger is None
+    assert bal.withdrawable_atomic == 950_000
 
-    payout = Payout(
-        agent_id=agent.id,
-        owner_id=agent.owner_id,
-        destination="0x" + "44" * 20,
-        asset="USDC",
-        amount_atomic=600_000,
-        status=PayoutStatus.REQUESTED,
-    )
-    db.add(payout)
 
-    payout_ledger = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.PAYOUT,
-        asset="USDC",
-        amount_atomic=600_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(payout_ledger)
-    await db.commit()
+@pytest.mark.asyncio
+async def test_executor_pending_reconciles_by_receipt(db: AsyncSession):
+    _, payout_id = await _requested_payout(db)
+    sender = FakeTokenSender(mode="pending")
+    executor = PayoutExecutor(TestSessionLocal, sender)
 
-    # Before tick: withdrawable is 400_000 (1_000_000 - 600_000 reserved)
-    b_before = await balances(db, agent.id)
-    assert b_before.withdrawable_atomic == 400_000
+    await executor.tick()
+    payout, _, bal = await _state(payout_id)
+    assert payout.status == PayoutStatus.SUBMITTED
+    assert payout.tx_hash == sender.tx_hash
+    assert bal.withdrawable_atomic == 450_000  # still reserved
 
-    async def failing_transfer(w, to, amount):
-        raise RuntimeError("network timeout / reverted")
+    await executor.tick()  # receipt unknown: stays submitted, no resend
+    assert (await _state(payout_id))[0].status == PayoutStatus.SUBMITTED
 
-    executor = PayoutExecutor(
-        session_factory=TestSessionLocal,
-        transfer_fn=failing_transfer,
-    )
+    sender.receipts[sender.tx_hash] = 1
+    await executor.tick()
+    payout, ledger, _ = await _state(payout_id)
+    assert payout.status == PayoutStatus.CONFIRMED
+    assert ledger.tx_hash == sender.tx_hash
+    assert len(sender.calls) == 1
 
-    processed = await executor.tick()
-    assert processed == 0
 
+@pytest.mark.asyncio
+async def test_executor_pending_then_reverted_restores_balance(db: AsyncSession):
+    _, payout_id = await _requested_payout(db)
+    sender = FakeTokenSender(mode="pending")
+    executor = PayoutExecutor(TestSessionLocal, sender)
+    await executor.tick()
+
+    sender.receipts[sender.tx_hash] = 0
+    await executor.tick()
+    payout, ledger, bal = await _state(payout_id)
+    assert payout.status == PayoutStatus.FAILED
+    assert ledger is None
+    assert bal.withdrawable_atomic == 950_000
+
+
+@pytest.mark.asyncio
+async def test_executor_never_resends_unknown_submission(db: AsyncSession):
+    """A crash after claiming leaves SUBMITTED with no hash: hold funds, never resend."""
+    _, payout_id = await _requested_payout(db)
     async with TestSessionLocal() as s:
-        p = await s.get(Payout, payout.id)
-        assert p.status == PayoutStatus.FAILED
+        payout = await s.get(Payout, payout_id)
+        payout.status = PayoutStatus.SUBMITTED
+        await s.commit()
+    sender = FakeTokenSender()
 
-        # PAYOUT ledger entry was deleted
-        entries = (
-            (
-                await s.execute(
-                    select(LedgerEntry).where(
-                        LedgerEntry.agent_id == agent.id,
-                        LedgerEntry.kind == LedgerKind.PAYOUT,
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
-        assert len(entries) == 0
+    await PayoutExecutor(TestSessionLocal, sender).tick()
 
-        # Withdrawable balance is restored to 1_000_000!
-        b_after = await balances(s, agent.id)
-        assert b_after.withdrawable_atomic == 1_000_000
+    assert sender.calls == []
+    payout, _, bal = await _state(payout_id)
+    assert payout.status == PayoutStatus.SUBMITTED
+    assert bal.withdrawable_atomic == 450_000
+
+
+@pytest.mark.asyncio
+async def test_executor_missing_wallet_fails_payout(db: AsyncSession):
+    _, payout_id = await _requested_payout(db, amount=1, with_wallet=False)
+    sender = FakeTokenSender()
+
+    await PayoutExecutor(TestSessionLocal, sender).tick()
+
+    payout, ledger, _ = await _state(payout_id)
+    assert payout.status == PayoutStatus.FAILED
+    assert ledger is None
+    assert sender.calls == []
+
+
+@pytest.mark.asyncio
+async def test_default_executor_sends_real_erc20_transfer(db: AsyncSession, monkeypatch):
+    """No injected sender: the executor must build a real ERC-20 transfer of the
+    payment token (regression: it raised NotImplementedError, and the payout's
+    asset was the "USDC" alias, not a token address)."""
+    from avaxagent.erc20 import MinimalERC20Client
+
+    from app.chain import network as net
+    from app.data_plane.settler import transfers
+
+    wallet, payout_id = await _requested_payout(db)
+    signed_for: list[str] = []
+    sent: list[tuple[str, str, int]] = []
+
+    class _Signer:
+        address = wallet.address
+
+    def fake_agent_signer(w):
+        signed_for.append(w.address)
+        return _Signer()
+
+    def fake_transfer(self, to, amount):
+        sent.append((self.address, to, amount))
+        return {"transactionHash": bytes.fromhex("cc" * 32), "status": 1}
+
+    monkeypatch.setattr(transfers, "agent_signer", fake_agent_signer)
+    monkeypatch.setattr(MinimalERC20Client, "transfer", fake_transfer)
+
+    await PayoutExecutor(TestSessionLocal).tick()
+
+    payout, ledger, _ = await _state(payout_id)
+    assert payout.status == PayoutStatus.CONFIRMED
+    assert payout.tx_hash == "0x" + "cc" * 32
+    assert signed_for == [wallet.address]
+    assert sent == [(net.payment_asset_address(), DEST, 500_000)]

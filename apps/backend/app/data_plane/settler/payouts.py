@@ -1,118 +1,170 @@
-"""Payout execution worker.
+"""Payout executor: sends requested withdrawals on-chain, at most once.
 
-Processes PayoutStatus.REQUESTED payouts:
-1. Calls transfer_fn (or agent_signer(wallet)) to transfer USDC to payout.destination.
-2. Updates Payout status -> SUBMITTED with tx_hash.
-3. Once receipt confirms -> CONFIRMED, stamps PAYOUT ledger entry with tx_hash.
-4. On failure/revert -> moves payout to FAILED and deletes the unconfirmed PAYOUT
-   ledger entry in the same transaction so balance is restored.
+Lifecycle of a ``Payout``::
+
+    requested --claim--> submitted --receipt ok--> confirmed
+                             |  \\--revert/error--> failed (PAYOUT ledger row dropped)
+                             \\--no receipt yet--> stays submitted, reconciled by tx hash
+
+A payout is claimed (``requested -> submitted``, committed) *before* the
+transfer is broadcast. If the process dies mid-send, the payout stays
+``submitted`` and is never sent again automatically: funds stay reserved until
+an operator reconciles it. Double-paying is worse than a stuck withdrawal.
 """
 
 from __future__ import annotations
 
-import inspect
+import asyncio
 import logging
-from collections.abc import Callable
-from typing import Any
+import uuid
+from dataclasses import dataclass
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.control_plane.agents.models import Agent
-from app.control_plane.billing.models import LedgerEntry, LedgerKind, Payout, PayoutStatus
+from app.control_plane.billing.models import LedgerEntry, Payout, PayoutStatus
 from app.control_plane.wallets.models import Wallet
+from app.data_plane.settler.transfers import Erc20TokenSender, TokenSender, TransferPending
+from app.db.session import SessionLocal
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _Claim:
+    payout_id: uuid.UUID
+    wallet: Wallet
+    asset: str
+    destination: str
+    amount: int
 
 
 class PayoutExecutor:
     def __init__(
         self,
-        session_factory: async_sessionmaker[AsyncSession] | Callable[[], AsyncSession],
-        transfer_fn: Callable[[Wallet, str, int], Any] | None = None,
-        confirm_fn: Callable[[str], Any] | None = None,
+        session_factory: async_sessionmaker[AsyncSession] = SessionLocal,
+        sender: TokenSender | None = None,
+        batch_size: int = 20,
     ) -> None:
         self.session_factory = session_factory
-        self.transfer_fn = transfer_fn
-        self.confirm_fn = confirm_fn
+        self._sender = sender
+        self.batch_size = batch_size
 
-    async def _send_transfer(self, wallet: Wallet, to: str, amount: int) -> str:
-        if self.transfer_fn is not None:
-            res = self.transfer_fn(wallet, to, amount)
-            if inspect.isawaitable(res):
-                return await res
-            return str(res)
-        raise NotImplementedError("transfer_fn required or live agent_signer")
+    @property
+    def sender(self) -> TokenSender:
+        if self._sender is None:
+            self._sender = Erc20TokenSender()
+        return self._sender
 
-    async def _confirm_tx(self, tx_hash: str) -> bool:
-        if self.confirm_fn is not None:
-            res = self.confirm_fn(tx_hash)
-            if inspect.isawaitable(res):
-                return await res
-            return bool(res)
-        return True
+    async def tick(self) -> None:
+        await self._reconcile_submitted()
+        for _ in range(self.batch_size):
+            claim = await self._claim_next()
+            if claim is None:
+                return
+            if claim is not _SKIPPED:
+                await self._send(claim)
 
-    async def tick(self) -> int:
-        processed = 0
-        async with self.session_factory() as db:
-            stmt = (
-                select(Payout, Wallet)
-                .join(Agent, Payout.agent_id == Agent.id)
-                .join(Wallet, Agent.wallet_id == Wallet.id)
-                .where(Payout.status == PayoutStatus.REQUESTED)
-                .order_by(Payout.created_at.asc())
+    async def _claim_next(self) -> _Claim | object | None:
+        """Move the oldest requested payout to submitted, in its own transaction."""
+        async with self.session_factory() as db, db.begin():
+            payout = (
+                await db.execute(
+                    select(Payout)
+                    .where(Payout.status == PayoutStatus.REQUESTED)
+                    .order_by(Payout.created_at)
+                    .limit(1)
+                    .with_for_update(skip_locked=True)
+                )
+            ).scalar_one_or_none()
+            if payout is None:
+                return None
+
+            wallet = (
+                await db.execute(
+                    select(Wallet)
+                    .join(Agent, Agent.wallet_id == Wallet.id)
+                    .where(Agent.id == payout.agent_id)
+                )
+            ).scalar_one_or_none()
+            if wallet is None:
+                log.warning("payout %s: agent %s has no wallet", payout.id, payout.agent_id)
+                await _mark_failed(db, payout)
+                return _SKIPPED
+
+            payout.status = PayoutStatus.SUBMITTED
+            return _Claim(
+                payout_id=payout.id,
+                wallet=wallet,
+                asset=payout.asset,
+                destination=payout.destination,
+                amount=payout.amount_atomic,
             )
-            res = await db.execute(stmt)
-            rows = res.all()
 
-        for payout, wallet in rows:
-            p_id = payout.id
-            p_agent_id = payout.agent_id
-            p_amount = payout.amount_atomic
-            p_dest = payout.destination
+    async def _send(self, claim: _Claim) -> None:
+        try:
+            tx_hash = await asyncio.to_thread(
+                self.sender.transfer, claim.wallet, claim.asset, claim.destination, claim.amount
+            )
+        except TransferPending as pending:
+            log.warning("payout %s pending as %s", claim.payout_id, pending.tx_hash)
+            await self._finish(claim.payout_id, PayoutStatus.SUBMITTED, pending.tx_hash)
+        except Exception:
+            log.exception("payout %s failed", claim.payout_id)
+            await self._finish(claim.payout_id, PayoutStatus.FAILED, None)
+        else:
+            await self._finish(claim.payout_id, PayoutStatus.CONFIRMED, tx_hash)
 
-            async with self.session_factory() as db:
-                p = await db.get(Payout, p_id)
-                if not p or p.status != PayoutStatus.REQUESTED:
-                    continue
+    async def _reconcile_submitted(self) -> None:
+        async with self.session_factory() as db:
+            submitted = (
+                (await db.execute(select(Payout).where(Payout.status == PayoutStatus.SUBMITTED)))
+                .scalars()
+                .all()
+            )
 
-                try:
-                    tx_hash = await self._send_transfer(wallet, p_dest, p_amount)
-                    p.status = PayoutStatus.SUBMITTED
-                    p.tx_hash = tx_hash
-                    await db.flush()
+        for payout in submitted:
+            if payout.tx_hash is None:
+                log.warning(
+                    "payout %s is submitted with no tx hash (send interrupted); "
+                    "funds stay reserved until an operator reconciles it",
+                    payout.id,
+                )
+                continue
+            status = await asyncio.to_thread(self.sender.receipt_status, payout.tx_hash)
+            if status == 1:
+                await self._finish(payout.id, PayoutStatus.CONFIRMED, payout.tx_hash)
+            elif status == 0:
+                log.warning("payout %s reverted on-chain: %s", payout.id, payout.tx_hash)
+                await self._finish(payout.id, PayoutStatus.FAILED, payout.tx_hash)
 
-                    confirmed = await self._confirm_tx(tx_hash)
-                    if confirmed:
-                        p.status = PayoutStatus.CONFIRMED
-                        ledger_stmt = select(LedgerEntry).where(
-                            LedgerEntry.agent_id == p_agent_id,
-                            LedgerEntry.kind == LedgerKind.PAYOUT,
-                            LedgerEntry.amount_atomic == p_amount,
-                            LedgerEntry.tx_hash.is_(None),
-                        )
-                        entry = (await db.execute(ledger_stmt)).scalars().first()
-                        if entry:
-                            entry.tx_hash = tx_hash
-                    else:
-                        raise RuntimeError("Transaction confirmation failed")
+    async def _finish(
+        self, payout_id: uuid.UUID, status: PayoutStatus, tx_hash: str | None
+    ) -> None:
+        """Apply the send outcome to a submitted payout and its ledger row."""
+        async with self.session_factory() as db, db.begin():
+            payout = (
+                await db.execute(select(Payout).where(Payout.id == payout_id).with_for_update())
+            ).scalar_one()
+            if payout.status != PayoutStatus.SUBMITTED:
+                return
+            payout.tx_hash = tx_hash
+            if status == PayoutStatus.FAILED:
+                await _mark_failed(db, payout)
+            elif status == PayoutStatus.CONFIRMED:
+                payout.status = PayoutStatus.CONFIRMED
+                await db.execute(
+                    update(LedgerEntry)
+                    .where(LedgerEntry.payout_id == payout_id)
+                    .values(tx_hash=tx_hash)
+                )
 
-                    await db.commit()
-                    processed += 1
-                except Exception as exc:
-                    await db.rollback()
-                    log.warning("Payout execution failed for payout %s: %s", p_id, exc)
-                    async with self.session_factory() as fail_db:
-                        failed_p = await fail_db.get(Payout, p_id)
-                        if failed_p:
-                            failed_p.status = PayoutStatus.FAILED
-                            del_stmt = delete(LedgerEntry).where(
-                                LedgerEntry.agent_id == p_agent_id,
-                                LedgerEntry.kind == LedgerKind.PAYOUT,
-                                LedgerEntry.amount_atomic == p_amount,
-                                LedgerEntry.tx_hash.is_(None),
-                            )
-                            await fail_db.execute(del_stmt)
-                            await fail_db.commit()
 
-        return processed
+_SKIPPED = object()
+
+
+async def _mark_failed(db: AsyncSession, payout: Payout) -> None:
+    """Fail the payout and drop its PAYOUT ledger row, freeing the funds."""
+    payout.status = PayoutStatus.FAILED
+    await db.execute(delete(LedgerEntry).where(LedgerEntry.payout_id == payout.id))

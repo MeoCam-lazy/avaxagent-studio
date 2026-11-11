@@ -1,7 +1,9 @@
 """Settle loop.
 
-* Payouts: executes REQUESTED withdrawals from agent wallets to owners.
-* Studio fees: sweeps accumulated fees to STUDIO_TREASURY_ADDRESS when above threshold.
+* Payouts: executes REQUESTED withdrawals from agent wallets to owners
+  (``app.data_plane.settler.payouts``).
+* Studio fees: sweeps accumulated fees to STUDIO_TREASURY_ADDRESS when above
+  threshold (``app.data_plane.settler.fees``).
 * erc8183 mode: for SUBMITTED jobs past the OptimisticPolicy dispute window,
   calls the permissionless router.settle(jobId) (gated until deployed in Task 23).
 * x402 mode: payment is settled on-chain by the facilitator at request time.
@@ -48,5 +50,8 @@ class SettleBot:
     async def run(self) -> None:
         log.info("settle bot starting (erc8183 enabled=%s)", settings.commerce_enabled)
         while True:
-            await self.tick()
+            try:
+                await self.tick()
+            except Exception:
+                log.exception("settle tick failed")
             await asyncio.sleep(self.poll_interval_s)
