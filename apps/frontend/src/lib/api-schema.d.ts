@@ -109,6 +109,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketplace/agents/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Marketplace Agent */
+        get: operations["marketplace_agent_api_v1_marketplace_agents__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agents/{agent_id}/wallet": {
         parameters: {
             query?: never;
@@ -654,6 +671,40 @@ export interface components {
             erc8004_agent_id: number | null;
             /** Agent Card Url */
             agent_card_url: string;
+            /** A2A Url */
+            a2a_url: string;
+        };
+        /**
+         * MarketplaceAgentProfile
+         * @description Public agent profile: the listing card plus track record.
+         */
+        MarketplaceAgentProfile: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Skills */
+            skills: string[];
+            settlement_mode: components["schemas"]["SettlementMode"];
+            /** Price Atomic */
+            price_atomic: number;
+            /** Chain Id */
+            chain_id: number;
+            /** Erc8004 Agent Id */
+            erc8004_agent_id: number | null;
+            /** Agent Card Url */
+            agent_card_url: string;
+            /** A2A Url */
+            a2a_url: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Jobs Completed */
+            jobs_completed: number;
         };
         /** NetworkInfo */
         NetworkInfo: {
@@ -1106,6 +1157,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketplaceAgent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    marketplace_agent_api_v1_marketplace_agents__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceAgentProfile"];
                 };
             };
             /** @description Validation Error */
