@@ -18,6 +18,7 @@ from collections.abc import Callable
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
+from app.data_plane.settler.escrow import EscrowSettler
 from app.data_plane.settler.fees import FeeSweeper
 from app.data_plane.settler.payouts import PayoutExecutor
 from app.db.session import SessionLocal
@@ -35,17 +36,18 @@ class SettleBot:
         | None = None,
         payout_executor: PayoutExecutor | None = None,
         fee_sweeper: FeeSweeper | None = None,
+        escrow_settler: EscrowSettler | None = None,
     ) -> None:
         self.session_factory = session_factory or SessionLocal
         self.payout_executor = payout_executor or PayoutExecutor(self.session_factory)
         self.fee_sweeper = fee_sweeper or FeeSweeper(self.session_factory)
+        self.escrow_settler = escrow_settler or EscrowSettler(self.session_factory)
 
     async def tick(self) -> None:
         await self.payout_executor.tick()
         await self.fee_sweeper.tick()
         if settings.commerce_enabled:
-            # Task 23 ERC-8183 dispute window & router.settle
-            pass
+            await self.escrow_settler.tick()
 
     async def run(self) -> None:
         log.info("settle bot starting (erc8183 enabled=%s)", settings.commerce_enabled)

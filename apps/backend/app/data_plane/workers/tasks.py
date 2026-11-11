@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from web3 import Web3
 
+from app.chain.commerce import erc8183_client
 from app.chain.sdk import erc8004_agent
 from app.chain.signers import agent_signer
 from app.control_plane.agents.models import Agent, AgentStatus
@@ -112,12 +113,31 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
         job.deliverable_uri = deliverable_uri
         job.deliverable_hash = deliverable_hash
 
-        job.status = JobStatus.SUBMITTED
-        await add_event(db, job, "submitted", uri=deliverable_uri)
-
-        if job.settlement_mode == SettlementMode.X402:
-            job.status = JobStatus.SETTLED
-            await add_event(db, job, "settled")
+        if job.settlement_mode == SettlementMode.ERC8183:
+            if job.chain_job_id is None:
+                raise RuntimeError("ERC-8183 job missing chain_job_id")
+            wallet = (
+                await db.execute(select(Wallet).where(Wallet.id == agent.wallet_id))
+            ).scalar_one_or_none()
+            if not wallet:
+                raise RuntimeError("Agent wallet not found")
+            signer = agent_signer(wallet)
+            commerce_client = erc8183_client(signer)
+            submit_tx = await asyncio.to_thread(
+                commerce_client.submit_result,
+                int(job.chain_job_id),
+                deliverable_uri,
+                bytes(keccak_bytes),
+            )
+            job.submit_tx_hash = submit_tx
+            job.status = JobStatus.SUBMITTED
+            await add_event(db, job, "submitted", uri=deliverable_uri, tx_hash=submit_tx)
+        else:
+            job.status = JobStatus.SUBMITTED
+            await add_event(db, job, "submitted", uri=deliverable_uri)
+            if job.settlement_mode == SettlementMode.X402:
+                job.status = JobStatus.SETTLED
+                await add_event(db, job, "settled")
 
         await db.flush()
     except Exception as exc:

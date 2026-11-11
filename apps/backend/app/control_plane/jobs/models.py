@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from enum import Enum
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, String, Text
+from sqlalchemy import JSON, BigInteger, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,6 +23,7 @@ class JobStatus(str, Enum):
 
 class Job(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "jobs"
+    __table_args__ = (UniqueConstraint("chain_id", "chain_job_id", name="uq_jobs_chain_job_id"),)
 
     agent_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), index=True)
     settlement_mode: Mapped[SettlementMode] = mapped_column(

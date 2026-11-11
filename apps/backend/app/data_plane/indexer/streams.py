@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from web3 import Web3
 
+from app.chain import commerce
 from app.chain import network as net
 from app.control_plane.agents.models import Agent, AgentStatus
 from app.control_plane.billing.ledger import record_income
-from app.control_plane.jobs.models import Job
+from app.control_plane.jobs.events import add_event
+from app.control_plane.jobs.models import Job, JobStatus
 from app.control_plane.wallets.models import Wallet
-from app.core.config import settings
+from app.core.config import SettlementMode, settings
+from app.core.queue import RUN_JOB, get_queue
 
 log = logging.getLogger(__name__)
 
@@ -66,9 +70,28 @@ ERC20_TRANSFER_EVENT_ABI = [
     }
 ]
 
+JOB_FUNDED_EVENT_ABI = [
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "jobId", "type": "uint256"},
+            {"indexed": True, "name": "client", "type": "address"},
+            {"indexed": True, "name": "provider", "type": "address"},
+            {"indexed": False, "name": "amount", "type": "uint256"},
+        ],
+        "name": "JobFunded",
+        "type": "event",
+    }
+]
+
+JOB_FUNDED_TOPIC = "0x" + Web3.keccak(
+    text="JobFunded(uint256,address,address,uint256)"
+).hex().removeprefix("0x")
+
 _w3 = Web3()
 _id_contract = _w3.eth.contract(abi=IDENTITY_REGISTRY_EVENTS_ABI)
 _erc20_contract = _w3.eth.contract(abi=ERC20_TRANSFER_EVENT_ABI)
+_commerce_contract = _w3.eth.contract(abi=JOB_FUNDED_EVENT_ABI)
 
 
 @dataclass
@@ -212,7 +235,9 @@ class IncomeStream(Stream):
 
             log_index = int(log_entry.get("logIndex", 0))
 
-            job_stmt = select(Job).where(Job.payment_tx_hash == tx_hash)
+            job_stmt = select(Job).where(
+                or_(Job.payment_tx_hash == tx_hash, Job.settle_tx_hash == tx_hash)
+            )
             job = (await db.execute(job_stmt)).scalar_one_or_none()
 
             asset = net.payment_asset_address()
@@ -243,14 +268,115 @@ class IncomeStream(Stream):
         await db.flush()
 
 
+class EscrowJobStream(Stream):
+    """Watches ``AgenticCommerce.JobFunded`` and enqueues ``RUN_JOB`` for managed agents."""
+
+    def __init__(
+        self,
+        *,
+        queue: Any | None = None,
+        commerce_reader: Any | None = None,
+    ) -> None:
+        super().__init__(
+            name="erc8183.jobs",
+            description=(
+                "AgenticCommerce JobFunded for managed providers -> enqueue RUN_JOB "
+                "(only with the studio-deployed ERC-8183 stack)"
+            ),
+            enabled=settings.commerce_enabled,
+        )
+        self.queue = queue
+        self.commerce_reader = commerce_reader
+
+    async def address(self, db: AsyncSession) -> list[str]:
+        return [commerce.contracts().commerce]
+
+    async def topics(self, db: AsyncSession) -> list:
+        return [JOB_FUNDED_TOPIC]
+
+    async def handle(self, db: AsyncSession, logs: list[dict[str, Any]]) -> None:
+        enqueued_ids: list[str] = []
+
+        for log_entry in logs:
+            try:
+                event_data = _commerce_contract.events.JobFunded().process_log(log_entry)
+            except Exception:
+                continue
+
+            args = event_data["args"]
+            chain_job_id = int(args["jobId"])
+            client_addr = str(args["client"])
+            provider_addr = str(args["provider"])
+            amount = int(args["amount"])
+
+            stmt = (
+                select(Agent, Wallet)
+                .join(Wallet, Agent.wallet_id == Wallet.id)
+                .where(
+                    func.lower(Wallet.address) == provider_addr.lower(),
+                    Agent.deleted_at.is_(None),
+                )
+            )
+            row = (await db.execute(stmt)).first()
+            if not row:
+                continue
+
+            agent, _wallet = row
+            raw_tx = log_entry.get("transactionHash")
+            tx_hash = raw_tx.hex() if hasattr(raw_tx, "hex") else str(raw_tx)
+            if not tx_hash.startswith("0x"):
+                tx_hash = "0x" + tx_hash
+
+            request_payload: dict[str, Any] = {"chain_job_id": chain_job_id}
+            reader = self.commerce_reader
+            if reader is not None:
+                try:
+                    info = await asyncio.to_thread(reader.get_job, chain_job_id)
+                    desc = info.get("description")
+                    if desc:
+                        request_payload = {"message": desc, "chain_job_id": chain_job_id}
+                except Exception:
+                    log.warning("Failed to fetch description for chain_job_id=%d", chain_job_id)
+
+            try:
+                async with db.begin_nested():
+                    job = Job(
+                        agent_id=agent.id,
+                        settlement_mode=SettlementMode.ERC8183,
+                        status=JobStatus.FUNDED,
+                        chain_id=agent.chain_id,
+                        chain_job_id=chain_job_id,
+                        client_address=client_addr,
+                        amount_atomic=amount,
+                        asset=net.payment_asset_address(),
+                        payment_tx_hash=tx_hash,
+                        request=request_payload,
+                    )
+                    db.add(job)
+                    await db.flush()
+                    await add_event(db, job, "funded", tx_hash=tx_hash, chain_job_id=chain_job_id)
+                    enqueued_ids.append(str(job.id))
+            except IntegrityError:
+                continue
+
+        await db.flush()
+
+        if enqueued_ids:
+            q = self.queue
+            owns_queue = q is None
+            if q is None:
+                q = await get_queue()
+            try:
+                for jid in enqueued_ids:
+                    await q.enqueue_job(RUN_JOB, jid)
+            finally:
+                if owns_queue and hasattr(q, "aclose"):
+                    await q.aclose()
+
+
 def streams() -> list[Stream]:
     return [
         IdentityStream(),
         IncomeStream(),
-        Stream(
-            "erc8183.jobs",
-            "AgenticCommerce JobFunded for managed providers -> enqueue RUN_JOB "
-            "(only with the studio-deployed ERC-8183 stack)",
-            settings.commerce_enabled,
-        ),
+        EscrowJobStream(),
     ]

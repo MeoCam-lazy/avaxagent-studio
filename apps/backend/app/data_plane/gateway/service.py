@@ -20,6 +20,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chain import commerce
 from app.chain import network as net
 from app.control_plane.agents.models import AgentStatus
 from app.control_plane.agents.service import AgentService
@@ -52,6 +53,30 @@ async def agent_card(db: AsyncSession, slug: str) -> dict[str, Any]:
         elif isinstance(s, str):
             skills.append({"id": s, "name": s})
 
+    extensions: dict[str, Any] = {
+        "x402": {
+            "network": net.caip2(),
+            "asset": net.payment_asset_address(),
+            "price": str(int(agent.price_atomic)),
+            "payTo": wallet_address,
+        },
+        "erc8004": {
+            "registry": f"{net.caip2()}:{net.identity_registry()}",
+            "agentId": agent.erc8004_agent_id,
+        },
+    }
+    if settings.commerce_enabled:
+        c = commerce.contracts()
+        extensions["erc8183"] = {
+            "network": net.caip2(),
+            "commerce": c.commerce,
+            "router": c.router,
+            "policy": c.policy,
+            "token": net.payment_asset_address(),
+            "price": str(int(agent.price_atomic)),
+            "provider": wallet_address,
+        }
+
     return {
         "name": agent.name,
         "description": agent.description,
@@ -61,18 +86,7 @@ async def agent_card(db: AsyncSession, slug: str) -> dict[str, Any]:
         "defaultInputModes": ["text"],
         "defaultOutputModes": ["text"],
         "skills": skills,
-        "extensions": {
-            "x402": {
-                "network": net.caip2(),
-                "asset": net.payment_asset_address(),
-                "price": str(int(agent.price_atomic)),
-                "payTo": wallet_address,
-            },
-            "erc8004": {
-                "registry": f"{net.caip2()}:{net.identity_registry()}",
-                "agentId": agent.erc8004_agent_id,
-            },
-        },
+        "extensions": extensions,
     }
 
 

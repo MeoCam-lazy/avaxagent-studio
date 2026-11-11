@@ -1,15 +1,32 @@
-# contracts/ (placeholder)
+# ERC-8183 Contracts on Avalanche (`contracts/`)
 
-Bộ hợp đồng ERC-8183 (**AgenticCommerce**, **EvaluatorRouter**, **OptimisticPolicy**) hiện **chưa được deploy trên Avalanche C-Chain**. Nếu studio muốn dùng thanh toán escrow (`SettlementMode.ERC8183`) thay cho x402, studio phải tự deploy các hợp đồng này.
+Bộ hợp đồng ký quỹ on-chain chuẩn **ERC-8183** đã được chuyển đổi sang **Avalanche C-Chain** (loại bỏ hoàn toàn phụ thuộc MegaFuel/paymaster của BNB Chain và dùng trực tiếp USDC gốc trên Avalanche):
 
-## Việc cần làm (TODO)
+- `src/AgenticCommerce.sol` — Kernel quản lý vòng đời Job (`Open -> Funded -> Submitted -> Completed / Rejected / Expired`).
+- `src/EvaluatorRouter.sol` — Hook & Router định tuyến quyết toán phi tập trung (`registerJob`, `settle`).
+- `src/OptimisticPolicy.sol` — Chính sách quyết toán lạc quan theo cửa sổ khiếu nại (`disputeWindow`, `dispute`, `voteReject`, `check`).
+- `script/Deploy.s.sol` — Script triển khai trọn bộ 3 hợp đồng lên Fuji (`43113`) hoặc Mainnet (`43114`).
+- `test/Smoke.t.sol` — Bài kiểm thử Foundry luồng `createJob -> registerJob -> setBudget -> fund -> submit -> settle`.
 
-1. Lấy source contract từ upstream (BNB Chain / ERC-8183 reference implementation) và đưa vào đây, dùng Foundry hoặc Hardhat.
-2. Cấu hình:
-   - Payment token: USDC Fuji `0x5425890298aed601595a70AB815c96711a31Bc65`, hoặc USDC mainnet `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E`.
-   - Bỏ phần phụ thuộc MegaFuel/paymaster vì Avalanche không có.
-3. Deploy lên Fuji (43113) trước, verify trên Snowtrace.
-4. Đặt các biến môi trường cho backend: `COMMERCE_ADDRESS`, `ROUTER_ADDRESS`, `POLICY_ADDRESS`, `INDEXER_START_BLOCK` (block deploy).
-5. Kiểm tra ABI trong `apps/backend/app/chain/abis/` khớp với bytecode đã deploy.
+## Token thanh toán mặc định
+- **Avalanche Fuji (`43113`)**: USDC `0x5425890298aed601595a70AB815c96711a31Bc65`
+- **Avalanche C-Chain Mainnet (`43114`)**: USDC `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E`
 
-Trước khi làm xong các bước này, `settings.commerce_enabled == False`: indexer bỏ qua stream `erc8183.jobs`, settle bot không gọi `router.settle()`, và frontend khóa lựa chọn ERC-8183.
+## Kiểm thử & Triển khai bằng Foundry
+
+```bash
+# Chạy smoke test local
+make contracts-test
+
+# Deploy lên Avalanche Fuji & verify Snowtrace
+DEPLOYER_PRIVATE_KEY=0x... RPC_URL=https://api.avax-test.network/ext/bc/C/rpc make contracts-deploy-fuji
+```
+
+Sau khi deploy lên Fuji/Mainnet, điền 3 địa chỉ in ra vào `.env` của backend để mở khóa chế độ `SettlementMode.ERC8183` (`settings.commerce_enabled == True`):
+
+```env
+COMMERCE_ADDRESS=0x...
+ROUTER_ADDRESS=0x...
+POLICY_ADDRESS=0x...
+INDEXER_START_BLOCK=<block_deploy>
+```

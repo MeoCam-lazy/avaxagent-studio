@@ -13,6 +13,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chain import commerce
+from app.chain import network as net
 from app.chain.network import chain_id
 from app.chain.reader import ChainReader
 from app.control_plane.agents.models import AgentStatus
@@ -22,7 +24,6 @@ from app.control_plane.jobs.events import add_event
 from app.control_plane.jobs.models import Job, JobStatus
 from app.control_plane.wallets.models import Wallet
 from app.core.config import SettlementMode
-from app.core.errors import FeatureDisabled
 from app.core.queue import RUN_JOB
 from app.data_plane.gateway.relayer import Relayer
 from app.data_plane.gateway.schemas import JsonRpcRequest
@@ -53,8 +54,9 @@ async def handle_a2a(
             detail={"error": "agent_not_found"},
         )
 
-    if agent.settlement_mode == SettlementMode.ERC8183:
-        raise FeatureDisabled("erc8183", "COMMERCE_* not configured")
+    escrow_contracts = (
+        commerce.contracts() if agent.settlement_mode == SettlementMode.ERC8183 else None
+    )
 
     # Method: tasks/get
     if req.method == "tasks/get":
@@ -141,6 +143,27 @@ async def handle_a2a(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "agent_wallet_not_found"},
+        )
+
+    if agent.settlement_mode == SettlementMode.ERC8183:
+        assert escrow_contracts is not None
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "jsonrpc": "2.0",
+                "id": req.id,
+                "result": {
+                    "kind": "escrow",
+                    "settlementMode": SettlementMode.ERC8183.value,
+                    "chainId": chain_id(),
+                    "commerce": escrow_contracts.commerce,
+                    "router": escrow_contracts.router,
+                    "policy": escrow_contracts.policy,
+                    "provider": wallet.address,
+                    "price": str(int(agent.price_atomic)),
+                    "token": net.payment_asset_address(),
+                },
+            },
         )
 
     ch = challenge(agent, wallet)
