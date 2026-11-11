@@ -74,7 +74,7 @@ class WalletService:
 
         agent.wallet_id = wallet.id
         agent.status = AgentStatus.PROVISIONING
-        await self.session.flush()
+        await self.session.commit()
 
         return WalletRead.model_validate(wallet)
 
@@ -122,7 +122,7 @@ class WalletService:
             )
 
         wallet.policy = policy.model_dump()
-        await self.session.flush()
+        await self.session.commit()
         return WalletRead.model_validate(wallet)
 
     async def balances(self, owner_id: str, agent_id: uuid.UUID) -> WalletBalances:

@@ -91,3 +91,51 @@ async def test_failed_registration_can_be_retried(
     assert res.status_code == 202
     assert res.json()["state"] == "pending"
     assert len(fake_queue.enqueued) == 1
+
+
+@pytest.mark.asyncio
+async def test_register_is_committed(
+    api: httpx.AsyncClient, db: AsyncSession, fake_queue: FakeQueue
+):
+    from tests.conftest import TestSessionLocal
+
+    from app.control_plane.agents.models import Agent
+
+    agent = await make_agent(db, status=AgentStatus.PROVISIONING)
+    wallet = await make_wallet(db)
+    agent.wallet_id = wallet.id
+    await db.commit()
+
+    res = await api.post(f"/api/v1/agents/{agent.id}/registration", json={})
+    assert res.status_code == 202
+
+    async with TestSessionLocal() as s:
+        saved = await s.get(Agent, agent.id)
+    assert saved.status == AgentStatus.REGISTERING
+
+
+@pytest.mark.asyncio
+async def test_enqueue_failure_marks_failed_for_retry(api: httpx.AsyncClient, db: AsyncSession):
+    from tests.conftest import TestSessionLocal
+
+    from app.control_plane.agents.models import Agent
+
+    class BrokenQueue:
+        async def enqueue_job(self, *args, **kwargs):
+            raise ConnectionError("redis down")
+
+    app.dependency_overrides[get_queue] = lambda: BrokenQueue()
+    try:
+        agent = await make_agent(db, status=AgentStatus.PROVISIONING)
+        wallet = await make_wallet(db)
+        agent.wallet_id = wallet.id
+        await db.commit()
+
+        with pytest.raises(ConnectionError):
+            await api.post(f"/api/v1/agents/{agent.id}/registration", json={})
+    finally:
+        app.dependency_overrides.pop(get_queue, None)
+
+    async with TestSessionLocal() as s:
+        saved = await s.get(Agent, agent.id)
+    assert saved.status == AgentStatus.FAILED

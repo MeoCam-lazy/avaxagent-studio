@@ -55,13 +55,21 @@ class RegistryService:
                 detail={"error": "agent_not_provisioning"},
             )
 
+        # Commit before enqueueing so the worker and the next status poll see
+        # REGISTERING; otherwise a poll reports the old state and invites a
+        # second register click (a second on-chain identity).
         agent.status = AgentStatus.REGISTERING
-        await self.session.flush()
+        await self.session.commit()
 
-        queue = self.queue
-        if queue is None:
-            queue = await get_queue()
-        await queue.enqueue_job(REGISTER_AGENT, str(agent.id))
+        try:
+            queue = self.queue
+            if queue is None:
+                queue = await get_queue()
+            await queue.enqueue_job(REGISTER_AGENT, str(agent.id))
+        except Exception:
+            agent.status = AgentStatus.FAILED
+            await self.session.commit()
+            raise
 
         return await self.status(owner_id, agent_id)
 
