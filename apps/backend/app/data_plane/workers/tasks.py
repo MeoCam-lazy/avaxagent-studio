@@ -42,6 +42,9 @@ def _extract_prompt(request: dict[str, Any]) -> str:
     if isinstance(msg, dict):
         if "text" in msg:
             return str(msg["text"])
+        if "parts" in msg:
+            # A2A ``Message``: ``{"role": "user", "parts": [{"kind": "text", "text": ...}]}``.
+            return _extract_prompt({"message": msg["parts"]})
         if "content" in msg:
             content = msg["content"]
             return (
