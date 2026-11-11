@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import String, cast, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,9 @@ from app.control_plane.agents.schemas import (
     AgentUpdate,
     LLMConfig,
     MarketplaceAgent,
+    MarketplaceAgentProfile,
 )
+from app.control_plane.jobs.models import Job, JobStatus
 from app.control_plane.wallets.models import Wallet
 from app.core.config import settings
 
@@ -166,11 +169,7 @@ class AgentService:
 
     async def marketplace(self, q: str | None, limit: int, offset: int) -> list[MarketplaceAgent]:
         """Public ACTIVE agents; may later merge 8004scan results for Avalanche."""
-        stmt = select(Agent).where(
-            Agent.is_public.is_(True),
-            Agent.status == AgentStatus.ACTIVE,
-            Agent.deleted_at.is_(None),
-        )
+        stmt = select(Agent).where(*self._listed())
         if q:
             pattern = f"%{q}%"
             stmt = stmt.where(
@@ -182,19 +181,47 @@ class AgentService:
             )
         stmt = stmt.order_by(Agent.created_at.desc()).limit(limit).offset(offset)
         agents = (await self.session.execute(stmt)).scalars().all()
-        return [
-            MarketplaceAgent(
-                slug=a.slug,
-                name=a.name,
-                description=a.description,
-                skills=a.skills,
-                settlement_mode=a.settlement_mode,
-                price_atomic=a.price_atomic,
-                chain_id=a.chain_id,
-                erc8004_agent_id=a.erc8004_agent_id,
-                agent_card_url=(
-                    f"{settings.public_gateway_url}/agents/{a.slug}/.well-known/agent-card.json"
-                ),
+        return [MarketplaceAgent(**self._public_fields(a)) for a in agents]
+
+    async def marketplace_profile(self, slug: str) -> MarketplaceAgentProfile:
+        """One listed agent, by slug. Unlisted agents are 404 like missing ones."""
+        stmt = select(Agent).where(Agent.slug == slug, *self._listed())
+        agent = (await self.session.execute(stmt)).scalar_one_or_none()
+        if agent is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail={"error": "agent_not_found"}
             )
-            for a in agents
-        ]
+        completed = await self.session.scalar(
+            select(func.count())
+            .select_from(Job)
+            .where(Job.agent_id == agent.id, Job.status == JobStatus.SETTLED)
+        )
+        return MarketplaceAgentProfile(
+            **self._public_fields(agent),
+            created_at=agent.created_at,
+            jobs_completed=completed or 0,
+        )
+
+    @staticmethod
+    def _listed() -> tuple[Any, ...]:
+        return (
+            Agent.is_public.is_(True),
+            Agent.status == AgentStatus.ACTIVE,
+            Agent.deleted_at.is_(None),
+        )
+
+    @staticmethod
+    def _public_fields(a: Agent) -> dict[str, Any]:
+        base = f"{settings.public_gateway_url}/agents/{a.slug}"
+        return {
+            "slug": a.slug,
+            "name": a.name,
+            "description": a.description,
+            "skills": a.skills,
+            "settlement_mode": a.settlement_mode,
+            "price_atomic": a.price_atomic,
+            "chain_id": a.chain_id,
+            "erc8004_agent_id": a.erc8004_agent_id,
+            "agent_card_url": f"{base}/.well-known/agent-card.json",
+            "a2a_url": f"{base}/a2a",
+        }

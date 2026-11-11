@@ -4,9 +4,10 @@ import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from tests.factories import make_agent
+from tests.factories import make_agent, make_job
 
 from app.control_plane.agents.models import Agent, AgentStatus
+from app.control_plane.jobs.models import JobStatus
 from app.core.config import settings
 
 
@@ -172,3 +173,31 @@ async def test_marketplace_card_url(api: httpx.AsyncClient, db: AsyncSession):
     item = next(i for i in res.json() if i["slug"] == agent.slug)
     expected_url = f"{settings.public_gateway_url}/agents/{agent.slug}/.well-known/agent-card.json"
     assert item["agent_card_url"] == expected_url
+
+
+@pytest.mark.asyncio
+async def test_marketplace_profile(api: httpx.AsyncClient, db: AsyncSession):
+    agent = await make_agent(db, slug="profile-agent", is_public=True, status=AgentStatus.ACTIVE)
+    await make_job(db, agent, status=JobStatus.SETTLED)
+    await make_job(db, agent, status=JobStatus.SETTLED)
+    await make_job(db, agent, status=JobStatus.FAILED)
+    await db.commit()
+
+    res = await api.get("/api/v1/marketplace/agents/profile-agent")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["slug"] == "profile-agent"
+    assert body["a2a_url"] == f"{settings.public_gateway_url}/agents/profile-agent/a2a"
+    assert body["jobs_completed"] == 2
+    assert "owner_id" not in body and "llm_config" not in body
+
+
+@pytest.mark.asyncio
+async def test_marketplace_profile_hides_unlisted(api: httpx.AsyncClient, db: AsyncSession):
+    await make_agent(db, slug="hidden-draft", is_public=True, status=AgentStatus.DRAFT)
+    await make_agent(db, slug="hidden-private", is_public=False, status=AgentStatus.ACTIVE)
+    await db.commit()
+    for slug in ("hidden-draft", "hidden-private", "nope"):
+        res = await api.get(f"/api/v1/marketplace/agents/{slug}")
+        assert res.status_code == 404, slug
+        assert res.json()["error"] == "agent_not_found"
