@@ -25,6 +25,13 @@ vi.mock("wagmi", async (importOriginal) => {
     useSignMessage: () => ({
       signMessageAsync: signMessageMock,
     }),
+    useConnect: () => ({
+      connectors: [],
+      connectAsync: vi.fn(),
+    }),
+    useDisconnect: () => ({
+      disconnect: vi.fn(),
+    }),
   };
 });
 
