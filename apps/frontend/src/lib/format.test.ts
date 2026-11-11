@@ -58,5 +58,7 @@ describe("assetLabel", () => {
   it("shortens unknown tokens and works before the network loads", () => {
     expect(assetLabel("0x00000000000000000000000000000000000000ee", net)).toBe("0x0000…00ee");
     expect(assetLabel("0x5425890298aed601595a70AB815c96711a31Bc65")).toBe("0x5425…Bc65");
+    expect(assetLabel("USDC", net)).toBe("USDC");
+    expect(assetLabel("AVAX", net)).toBe("AVAX");
   });
 });
