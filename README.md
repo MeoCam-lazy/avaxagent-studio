@@ -124,6 +124,7 @@ make web            # http://localhost:5173        (frontend, proxies /api → :
 
 make indexer | make worker | make settler   # data plane processes
 make test           # pytest for backend + SDK
+make fuji-fork && make test-fuji-fork   # end-to-end on a Fuji fork (docs/FUJI_E2E.md)
 make lint           # ruff + eslint
 ```
 
