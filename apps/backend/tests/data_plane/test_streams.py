@@ -222,13 +222,17 @@ async def test_income_matches_job_payment(db: AsyncSession):
     await db.commit()
 
     entries = (
-        await db.execute(
-            select(LedgerEntry).where(
-                LedgerEntry.job_id == job.id,
-                LedgerEntry.kind == LedgerKind.INCOME,
+        (
+            await db.execute(
+                select(LedgerEntry).where(
+                    LedgerEntry.job_id == job.id,
+                    LedgerEntry.kind == LedgerKind.INCOME,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert len(entries) == 1
     assert entries[0].log_index == 5
@@ -265,13 +269,17 @@ async def test_income_direct_transfer_booked(db: AsyncSession):
     await db.commit()
 
     entries = (
-        await db.execute(
-            select(LedgerEntry).where(
-                LedgerEntry.agent_id == agent.id,
-                LedgerEntry.tx_hash == tx_hash,
+        (
+            await db.execute(
+                select(LedgerEntry).where(
+                    LedgerEntry.agent_id == agent.id,
+                    LedgerEntry.tx_hash == tx_hash,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert len(entries) == 2  # 1 INCOME + 1 STUDIO_FEE
     income = next(e for e in entries if e.kind == LedgerKind.INCOME)
@@ -321,13 +329,17 @@ async def test_income_idempotent(db: AsyncSession):
     await db.commit()
 
     entries = (
-        await db.execute(
-            select(LedgerEntry).where(
-                LedgerEntry.agent_id == agent.id,
-                LedgerEntry.tx_hash == tx_hash,
-                LedgerEntry.kind == LedgerKind.INCOME,
+        (
+            await db.execute(
+                select(LedgerEntry).where(
+                    LedgerEntry.agent_id == agent.id,
+                    LedgerEntry.tx_hash == tx_hash,
+                    LedgerEntry.kind == LedgerKind.INCOME,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert len(entries) == 1
