@@ -37,6 +37,16 @@ class LedgerEntry(UUIDPrimaryKey, Timestamps, Base):
     chain_id: Mapped[int] = mapped_column(BigInteger)
     tx_hash: Mapped[str | None] = mapped_column(String(66), nullable=True)
     log_index: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # Set on PAYOUT rows only: the withdrawal this row books, so a failed
+    # payout can drop its row and a confirmed one can stamp the tx hash.
+    payout_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("payouts.id"), nullable=True, unique=True
+    )
+    # Set on STUDIO_FEE rows once a sweep claims them. ``tx_hash`` keeps
+    # pointing at the payment the fee came from.
+    fee_sweep_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("fee_sweeps.id"), nullable=True, index=True
+    )
 
     __table_args__ = (
         UniqueConstraint("chain_id", "tx_hash", "log_index", "kind", name="uq_ledger_onchain"),
@@ -53,5 +63,24 @@ class Payout(UUIDPrimaryKey, Timestamps, Base):
     amount_atomic: Mapped[int] = mapped_column(TokenAmount)
     status: Mapped[PayoutStatus] = mapped_column(
         SAEnum(PayoutStatus, native_enum=False), default=PayoutStatus.REQUESTED
+    )
+    tx_hash: Mapped[str | None] = mapped_column(String(66), nullable=True)
+
+
+class FeeSweep(UUIDPrimaryKey, Timestamps, Base):
+    """One transfer of accumulated studio fees from an agent wallet to the treasury.
+
+    Same lifecycle as ``Payout`` (``submitted`` -> ``confirmed`` / ``failed``),
+    minus ``requested``: the sweeper creates it already claimed.
+    """
+
+    __tablename__ = "fee_sweeps"
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), index=True)
+    destination: Mapped[str] = mapped_column(String(42))
+    asset: Mapped[str] = mapped_column(String(42))
+    amount_atomic: Mapped[int] = mapped_column(TokenAmount)
+    status: Mapped[PayoutStatus] = mapped_column(
+        SAEnum(PayoutStatus, native_enum=False), default=PayoutStatus.SUBMITTED
     )
     tx_hash: Mapped[str | None] = mapped_column(String(66), nullable=True)

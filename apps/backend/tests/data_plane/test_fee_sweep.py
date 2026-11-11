@@ -4,78 +4,53 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.conftest import TestSessionLocal
+from tests.factories import make_agent, make_job, make_wallet
+from tests.fakes import FakeChainReader, FakeTokenSender
 
-from app.control_plane.agents.models import Agent, AgentStatus
-from app.control_plane.billing.models import LedgerEntry, LedgerKind
-from app.control_plane.wallets.models import Wallet
+from app.chain import network as net
+from app.control_plane.billing.ledger import balances, record_income
+from app.control_plane.billing.models import FeeSweep, LedgerEntry, LedgerKind, PayoutStatus
 from app.core.config import settings
 from app.data_plane.settler.fees import FeeSweeper
 
+TREASURY = "0x2222222222222222222222222222222222222222"
+# 5% of 20 USDC = 1 USDC = FEE_SWEEP_MIN_ATOMIC.
+INCOME_AT_THRESHOLD = 20_000_000
 
-@pytest.mark.asyncio
-async def test_sweeps_above_threshold(db: AsyncSession, monkeypatch):
-    treasury = "0x" + "99" * 20
-    monkeypatch.setattr(settings, "studio_treasury_address", treasury)
-    monkeypatch.setattr(settings, "fee_sweep_min_atomic", 1_000_000)
 
-    wallet = Wallet(address="0x" + "11" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+@pytest.fixture(autouse=True)
+def _treasury(monkeypatch):
+    monkeypatch.setattr(settings, "studio_treasury_address", TREASURY)
 
-    agent = Agent(
-        owner_id="0x" + "aa" * 20,
-        slug="agent-fee-sweep-1",
-        name="Agent Fee Sweep 1",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
 
-    e1 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=600_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    e2 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=500_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add_all([e1, e2])
+async def _agent_with_income(db: AsyncSession, *incomes: int):
+    """Agent with a wallet and one x402 job per income, booked like the gateway does."""
+    wallet = await make_wallet(db)
+    agent = await make_agent(db, wallet_id=wallet.id)
+    for i, amount in enumerate(incomes):
+        job = await make_job(db, agent)
+        await record_income(
+            db,
+            job=job,
+            amount=amount,
+            asset=net.payment_asset_address(),
+            tx_hash="0x" + f"{i + 1:064x}",  # real fee rows carry the payment tx hash
+        )
     await db.commit()
+    return agent, wallet
 
-    called = []
 
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "aa" * 32
+def _sweeper(sender: FakeTokenSender, reader: FakeChainReader | None = None) -> FeeSweeper:
+    return FeeSweeper(TestSessionLocal, sender, reader or FakeChainReader())
 
-    sweeper = FeeSweeper(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-        get_native_balance_fn=lambda _: 10**18,
-    )
 
-    count = await sweeper.tick()
-    assert count == 1
-    assert len(called) == 1
-    assert called[0] == (wallet.address, treasury, 1_100_000)
-
-    # Check stamped rows
-    async with TestSessionLocal() as session:
-        entries = (
+async def _fee_rows(agent_id):
+    async with TestSessionLocal() as s:
+        return (
             (
-                await session.execute(
+                await s.execute(
                     select(LedgerEntry).where(
-                        LedgerEntry.agent_id == agent.id,
+                        LedgerEntry.agent_id == agent_id,
                         LedgerEntry.kind == LedgerKind.STUDIO_FEE,
                     )
                 )
@@ -83,215 +58,144 @@ async def test_sweeps_above_threshold(db: AsyncSession, monkeypatch):
             .scalars()
             .all()
         )
-        assert len(entries) == 2
-        assert all(e.tx_hash == "0x" + "aa" * 32 for e in entries)
+
+
+async def _sweeps(agent_id):
+    async with TestSessionLocal() as s:
+        return (
+            (await s.execute(select(FeeSweep).where(FeeSweep.agent_id == agent_id)))
+            .scalars()
+            .all()
+        )
 
 
 @pytest.mark.asyncio
-async def test_below_threshold_noop(db: AsyncSession, monkeypatch):
-    treasury = "0x" + "99" * 20
-    monkeypatch.setattr(settings, "studio_treasury_address", treasury)
-    monkeypatch.setattr(settings, "fee_sweep_min_atomic", 1_000_000)
+async def test_sweeps_above_threshold(db: AsyncSession):
+    # Two jobs: fees 600_000 + 400_000 = 1_000_000.
+    agent, wallet = await _agent_with_income(db, 12_000_000, 8_000_000)
+    before = await balances(db, agent.id)
+    sender = FakeTokenSender()
 
-    wallet = Wallet(address="0x" + "22" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    await _sweeper(sender).tick()
 
-    agent = Agent(
-        owner_id="0x" + "bb" * 20,
-        slug="agent-fee-sweep-2",
-        name="Agent Fee Sweep 2",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
+    assert sender.calls == [(wallet.address, net.payment_asset_address(), TREASURY, 1_000_000)]
+    [sweep] = await _sweeps(agent.id)
+    assert sweep.status == PayoutStatus.CONFIRMED
+    assert sweep.tx_hash == sender.tx_hash
+    assert sweep.amount_atomic == 1_000_000
+    rows = await _fee_rows(agent.id)
+    assert {r.fee_sweep_id for r in rows} == {sweep.id}
+    # Provenance is kept: each fee row still points at its payment tx.
+    assert {r.tx_hash for r in rows} == {"0x" + f"{1:064x}", "0x" + f"{2:064x}"}
+    # Fees were never the owner's money: withdrawable does not move.
+    async with TestSessionLocal() as s:
+        assert (await balances(s, agent.id)).withdrawable_atomic == before.withdrawable_atomic
 
-    e1 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=500_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(e1)
-    await db.commit()
 
-    called = []
+@pytest.mark.asyncio
+async def test_below_threshold_noop(db: AsyncSession):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD - 20)  # fee 999_999
+    sender = FakeTokenSender()
 
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "bb" * 32
+    await _sweeper(sender).tick()
 
-    sweeper = FeeSweeper(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-        get_native_balance_fn=lambda _: 10**18,
-    )
-
-    count = await sweeper.tick()
-    assert count == 0
-    assert len(called) == 0
+    assert sender.calls == []
+    assert await _sweeps(agent.id) == []
 
 
 @pytest.mark.asyncio
 async def test_no_treasury_noop(db: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "studio_treasury_address", None)
-    monkeypatch.setattr(settings, "fee_sweep_min_atomic", 1_000_000)
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender()
 
-    wallet = Wallet(address="0x" + "33" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    await _sweeper(sender).tick()
 
-    agent = Agent(
-        owner_id="0x" + "cc" * 20,
-        slug="agent-fee-sweep-3",
-        name="Agent Fee Sweep 3",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
-
-    e1 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=2_000_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(e1)
-    await db.commit()
-
-    called = []
-
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "cc" * 32
-
-    sweeper = FeeSweeper(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-        get_native_balance_fn=lambda _: 10**18,
-    )
-
-    count = await sweeper.tick()
-    assert count == 0
-    assert len(called) == 0
+    assert sender.calls == []
+    assert await _sweeps(agent.id) == []
 
 
 @pytest.mark.asyncio
-async def test_low_avax_skips(db: AsyncSession, monkeypatch):
-    treasury = "0x" + "99" * 20
-    monkeypatch.setattr(settings, "studio_treasury_address", treasury)
-    monkeypatch.setattr(settings, "fee_sweep_min_atomic", 1_000_000)
+async def test_low_avax_skips(db: AsyncSession, caplog):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender(gas_cost_wei=10**15)
 
-    wallet = Wallet(address="0x" + "44" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    await _sweeper(sender, FakeChainReader(native_balance=10**15 - 1)).tick()
 
-    agent = Agent(
-        owner_id="0x" + "dd" * 20,
-        slug="agent-fee-sweep-4",
-        name="Agent Fee Sweep 4",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
-    )
-    db.add(agent)
-    await db.flush()
-
-    e1 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=2_000_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(e1)
-    await db.commit()
-
-    called = []
-
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "dd" * 32
-
-    sweeper = FeeSweeper(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-        get_native_balance_fn=lambda _: 0,  # 0 AVAX
-    )
-
-    count = await sweeper.tick()
-    assert count == 0
-    assert len(called) == 0
-
-    # Ensure still unstamped
-    async with TestSessionLocal() as session:
-        entry = (
-            await session.execute(select(LedgerEntry).where(LedgerEntry.agent_id == agent.id))
-        ).scalar_one()
-        assert entry.tx_hash is None
+    assert sender.calls == []
+    assert await _sweeps(agent.id) == []
+    assert any("AVAX" in r.message and r.levelname == "WARNING" for r in caplog.records)
 
 
 @pytest.mark.asyncio
-async def test_rows_stamped_once(db: AsyncSession, monkeypatch):
-    treasury = "0x" + "99" * 20
-    monkeypatch.setattr(settings, "studio_treasury_address", treasury)
-    monkeypatch.setattr(settings, "fee_sweep_min_atomic", 1_000_000)
+async def test_rows_stamped_once(db: AsyncSession):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender()
+    sweeper = _sweeper(sender)
 
-    wallet = Wallet(address="0x" + "55" * 20, chain_id=43113)
-    db.add(wallet)
-    await db.flush()
+    await sweeper.tick()
+    await sweeper.tick()
 
-    agent = Agent(
-        owner_id="0x" + "ee" * 20,
-        slug="agent-fee-sweep-5",
-        name="Agent Fee Sweep 5",
-        status=AgentStatus.ACTIVE,
-        chain_id=43113,
-        wallet_id=wallet.id,
+    assert len(sender.calls) == 1
+    assert len(await _sweeps(agent.id)) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_sweep_releases_rows_for_retry(db: AsyncSession):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender(mode="revert")
+    sweeper = _sweeper(sender)
+
+    await sweeper.tick()
+    [failed] = await _sweeps(agent.id)
+    assert failed.status == PayoutStatus.FAILED
+    assert all(r.fee_sweep_id is None for r in await _fee_rows(agent.id))
+
+    sender.mode = "ok"
+    await sweeper.tick()
+    confirmed = [s for s in await _sweeps(agent.id) if s.status == PayoutStatus.CONFIRMED]
+    assert len(confirmed) == 1
+    assert {r.fee_sweep_id for r in await _fee_rows(agent.id)} == {confirmed[0].id}
+
+
+@pytest.mark.asyncio
+async def test_pending_sweep_reconciles_without_resend(db: AsyncSession):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender(mode="pending")
+    sweeper = _sweeper(sender)
+
+    await sweeper.tick()
+    [sweep] = await _sweeps(agent.id)
+    assert sweep.status == PayoutStatus.SUBMITTED
+    assert sweep.tx_hash == sender.tx_hash
+
+    await sweeper.tick()  # still no receipt: no second transfer
+    assert len(sender.calls) == 1
+
+    sender.receipts[sender.tx_hash] = 1
+    await sweeper.tick()
+    [sweep] = await _sweeps(agent.id)
+    assert sweep.status == PayoutStatus.CONFIRMED
+    assert len(sender.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_new_fees_after_sweep_accumulate_separately(db: AsyncSession):
+    agent, _ = await _agent_with_income(db, INCOME_AT_THRESHOLD)
+    sender = FakeTokenSender()
+    sweeper = _sweeper(sender)
+    await sweeper.tick()
+
+    job = await make_job(db, agent)
+    await record_income(
+        db, job=job, amount=1_000_000, asset=net.payment_asset_address(), tx_hash="0x" + "f" * 64
     )
-    db.add(agent)
-    await db.flush()
-
-    e1 = LedgerEntry(
-        agent_id=agent.id,
-        kind=LedgerKind.STUDIO_FEE,
-        asset="USDC",
-        amount_atomic=1_500_000,
-        chain_id=43113,
-        tx_hash=None,
-    )
-    db.add(e1)
     await db.commit()
+    await sweeper.tick()  # 50_000 unswept: below threshold
 
-    called = []
-
-    async def fake_transfer(w, to, amount):
-        called.append((w.address, to, amount))
-        return "0x" + "ee" * 32
-
-    sweeper = FeeSweeper(
-        session_factory=TestSessionLocal,
-        transfer_fn=fake_transfer,
-        get_native_balance_fn=lambda _: 10**18,
-    )
-
-    c1 = await sweeper.tick()
-    assert c1 == 1
-    assert len(called) == 1
-
-    # Second tick: rows already stamped, should not sweep again
-    c2 = await sweeper.tick()
-    assert c2 == 0
-    assert len(called) == 1
+    assert len(sender.calls) == 1
+    unswept = [r for r in await _fee_rows(agent.id) if r.fee_sweep_id is None]
+    assert [r.amount_atomic for r in unswept] == [50_000]
 
 
 @pytest.mark.asyncio

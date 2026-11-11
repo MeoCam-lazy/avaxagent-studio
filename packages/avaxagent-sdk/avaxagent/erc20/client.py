@@ -1,6 +1,7 @@
 """Minimal ERC-20 client for payment-token helpers (USDC / EURC on Avalanche).
 
-Read helpers (``decimals``, ``balance_of``, ``allowance``) plus ``approve``.
+Read helpers (``decimals``, ``balance_of``, ``allowance``) plus ``approve`` and
+``transfer``.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ def _load_abi() -> list:
 
 
 class MinimalERC20Client(ContractClientMixin):
-    """Only ``decimals / symbol / balanceOf / allowance / approve``."""
+    """Only ``decimals / symbol / balanceOf / allowance / approve / transfer``."""
 
     def __init__(
         self,
@@ -58,4 +59,13 @@ class MinimalERC20Client(ContractClientMixin):
 
     def approve(self, spender: str, amount: int) -> dict[str, Any]:
         fn = self.contract.functions.approve(Web3.to_checksum_address(spender), amount)
+        return self._send_tx(fn)
+
+    def transfer(self, to: str, amount: int) -> dict[str, Any]:
+        """Send ``amount`` atomic units to ``to`` and wait for the receipt.
+
+        Raises ``TransactionPendingError`` when the tx was broadcast but not
+        confirmed in time: the caller must reconcile by hash, never resend.
+        """
+        fn = self.contract.functions.transfer(Web3.to_checksum_address(to), amount)
         return self._send_tx(fn)

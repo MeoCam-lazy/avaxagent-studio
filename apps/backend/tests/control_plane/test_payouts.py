@@ -176,3 +176,48 @@ async def test_payout_success_creates_payout_and_ledger(api: AsyncClient, db: As
     list_resp = await api.get("/api/v1/billing/payouts", headers=auth_headers(owner))
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_payout_stores_token_address_and_links_ledger_row(
+    api: AsyncClient, db: AsyncSession
+):
+    from sqlalchemy import select
+
+    from app.chain import network as net
+
+    owner = "0x" + "88" * 20
+    agent = Agent(
+        owner_id=owner.lower(),
+        slug="agent-payout-asset",
+        name="Agent Payout Asset",
+        status=AgentStatus.ACTIVE,
+        chain_id=43113,
+    )
+    db.add(agent)
+    await db.commit()
+    await record_income(
+        db,
+        agent_id=agent.id,
+        chain_id=agent.chain_id,
+        amount=1_000_000,
+        asset=net.payment_asset_address(),
+        tx_hash="0x" + "88" * 32,
+        log_index=0,
+    )
+    await db.commit()
+
+    resp = await api.post(
+        "/api/v1/billing/payouts",
+        json={"agent_id": str(agent.id), "destination": "0x" + "99" * 20, "amount_atomic": 1},
+        headers=auth_headers(owner),
+    )
+    assert resp.status_code == 202
+    body = resp.json()
+    assert body["asset"] == net.payment_asset_address()  # not the "USDC" alias
+
+    row = (
+        await db.execute(select(LedgerEntry).where(LedgerEntry.kind == LedgerKind.PAYOUT))
+    ).scalar_one()
+    assert str(row.payout_id) == body["id"]
+    assert row.asset == net.payment_asset_address()
