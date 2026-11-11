@@ -125,6 +125,41 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
         await db.flush()
 
 
+async def refresh_agent_uri(ctx: dict[str, Any], agent_id: str) -> None:
+    session: AsyncSession | None = ctx.get("session")
+    if session is not None:
+        await _refresh_agent_uri_with_session(session, agent_id)
+    else:
+        async with SessionLocal() as db:
+            await _refresh_agent_uri_with_session(db, agent_id)
+            await db.commit()
+
+
+async def _refresh_agent_uri_with_session(db: AsyncSession, agent_id: str) -> None:
+    agent_uuid = uuid.UUID(agent_id)
+    agent = (await db.execute(select(Agent).where(Agent.id == agent_uuid))).scalar_one_or_none()
+    if not agent or agent.erc8004_agent_id is None:
+        return
+
+    wallet = (
+        await db.execute(select(Wallet).where(Wallet.id == agent.wallet_id))
+    ).scalar_one_or_none()
+    if not wallet:
+        raise RuntimeError("Agent wallet not found")
+
+    signer = agent_signer(wallet)
+    client = erc8004_agent(signer)
+    new_uri = await asyncio.to_thread(build_agent_uri, agent)
+
+    res = await asyncio.to_thread(client.set_agent_uri, int(agent.erc8004_agent_id), new_uri)
+    if not res or not res.get("success"):
+        err_msg = res.get("error", "Updating agent URI on-chain failed") if res else "Failed"
+        raise RuntimeError(err_msg)
+
+    agent.agent_uri = new_uri
+    await db.flush()
+
+
 async def register_agent(ctx: dict[str, Any], agent_id: str) -> None:
     session: AsyncSession | None = ctx.get("session")
     if session is not None:
@@ -154,7 +189,7 @@ async def _register_agent_with_session(db: AsyncSession, agent_id: str) -> None:
 
     signer = agent_signer(wallet)
     client = erc8004_agent(signer)
-    agent_uri = build_agent_uri(agent)
+    agent_uri = await asyncio.to_thread(build_agent_uri, agent)
 
     try:
         res = await asyncio.to_thread(client.register_agent, agent_uri)

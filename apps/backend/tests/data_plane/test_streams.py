@@ -276,9 +276,13 @@ async def test_income_direct_transfer_booked(db: AsyncSession):
     assert len(entries) == 2  # 1 INCOME + 1 STUDIO_FEE
     income = next(e for e in entries if e.kind == LedgerKind.INCOME)
     fee = next(e for e in entries if e.kind == LedgerKind.STUDIO_FEE)
+    from app.chain import network as net
+
     assert income.amount_atomic == 500_000
     assert income.job_id is None
+    assert income.asset == net.payment_asset_address()
     assert fee.amount_atomic == 25_000  # 5% fee
+    assert fee.asset == net.payment_asset_address()
 
 
 @pytest.mark.asyncio

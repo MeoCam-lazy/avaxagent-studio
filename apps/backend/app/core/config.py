@@ -20,8 +20,10 @@ from __future__ import annotations
 from enum import Enum
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEV_JWT_SECRETS = frozenset({"dev-insecure", "dev-insecure-secret-change-in-prod"})
 
 
 class SettlementMode(str, Enum):
@@ -92,6 +94,17 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-5-5"
     llm_api_key: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_prod_jwt_secret(self) -> Settings:
+        if (
+            self.environment.lower() != "development"
+            and (not self.auth_jwt_secret or self.auth_jwt_secret in _DEV_JWT_SECRETS)
+        ):
+            raise ValueError(
+                "AUTH_JWT_SECRET must be set to a strong secret outside development"
+            )
+        return self
 
     @property
     def commerce_enabled(self) -> bool:

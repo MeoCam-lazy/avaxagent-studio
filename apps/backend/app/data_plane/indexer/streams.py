@@ -215,12 +215,13 @@ class IncomeStream(Stream):
             job_stmt = select(Job).where(Job.payment_tx_hash == tx_hash)
             job = (await db.execute(job_stmt)).scalar_one_or_none()
 
+            asset = net.payment_asset_address()
             if job is not None:
                 await record_income(
                     db,
                     job=job,
                     amount=value,
-                    asset="USDC",
+                    asset=asset,
                     tx_hash=tx_hash,
                     log_index=log_index,
                 )
@@ -232,7 +233,7 @@ class IncomeStream(Stream):
                             agent_id=agent.id,
                             chain_id=agent.chain_id,
                             amount=value,
-                            asset="USDC",
+                            asset=asset,
                             tx_hash=tx_hash,
                             log_index=log_index,
                         )

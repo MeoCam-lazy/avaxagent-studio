@@ -17,7 +17,7 @@ from app.control_plane.registry.schemas import (
     RegistrationStatus,
 )
 from app.core.config import settings
-from app.core.queue import REGISTER_AGENT, get_queue
+from app.core.queue import REFRESH_AGENT_URI, REGISTER_AGENT, get_queue
 
 
 def network_info() -> NetworkInfo:
@@ -96,10 +96,20 @@ class RegistryService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "not_registered"},
             )
+        if agent.wallet_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "wallet_required"},
+            )
 
         queue = self.queue
+        owns_queue = queue is None
         if queue is None:
             queue = await get_queue()
-        await queue.enqueue_job(REGISTER_AGENT, str(agent.id))
+        try:
+            await queue.enqueue_job(REFRESH_AGENT_URI, str(agent.id))
+        finally:
+            if owns_queue and hasattr(queue, "aclose"):
+                await queue.aclose()
 
         return await self.status(owner_id, agent_id)

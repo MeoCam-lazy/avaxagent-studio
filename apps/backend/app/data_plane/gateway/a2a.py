@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from typing import Any
@@ -53,7 +54,7 @@ async def handle_a2a(
         )
 
     if agent.settlement_mode == SettlementMode.ERC8183:
-        raise FeatureDisabled("erc8183")
+        raise FeatureDisabled("erc8183", "COMMERCE_* not configured")
 
     # Method: tasks/get
     if req.method == "tasks/get":
@@ -189,7 +190,10 @@ async def handle_a2a(
 
     # Step 2: Check on-chain authorization_used
     nonce_bytes = bytes.fromhex(auth.nonce.removeprefix("0x"))
-    if chain_reader.authorization_used(accept.asset, auth.from_, nonce_bytes):
+    used = await asyncio.to_thread(
+        chain_reader.authorization_used, accept.asset, auth.from_, nonce_bytes
+    )
+    if used:
         await db.rollback()
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
@@ -199,7 +203,9 @@ async def handle_a2a(
     # Step 3: Settle payment via relayer
     payload = decode_payment(x_payment) if isinstance(x_payment, str) else x_payment
     try:
-        tx_hash = relayer.settle(accept.asset, auth, payload.payload.signature)
+        tx_hash = await asyncio.to_thread(
+            relayer.settle, accept.asset, auth, payload.payload.signature
+        )
     except Exception as exc:
         job.status = JobStatus.FAILED
         job.error = str(exc)[:2000]
