@@ -67,3 +67,27 @@ async def test_agent_uri_contains_gateway_endpoint(db: AsyncSession):
     parsed = json.loads(base64.b64decode(b64_content).decode("utf-8"))
     endpoints = [s["endpoint"] for s in parsed.get("services", [])]
     assert expected_endpoint in endpoints
+
+
+@pytest.mark.asyncio
+async def test_status_of_unregistered_agent(api: httpx.AsyncClient, db: AsyncSession):
+    agent = await make_agent(db, status=AgentStatus.DRAFT)
+    res = await api.get(f"/api/v1/agents/{agent.id}/registration")
+    assert res.status_code == 200
+    assert res.json()["state"] == "not_registered"
+
+
+@pytest.mark.asyncio
+async def test_failed_registration_can_be_retried(
+    api: httpx.AsyncClient, db: AsyncSession, fake_queue: FakeQueue
+):
+    agent = await make_agent(db, status=AgentStatus.FAILED)
+    wallet = await make_wallet(db)
+    agent.wallet_id = wallet.id
+    await db.flush()
+
+    assert (await api.get(f"/api/v1/agents/{agent.id}/registration")).json()["state"] == "failed"
+    res = await api.post(f"/api/v1/agents/{agent.id}/registration", json={})
+    assert res.status_code == 202
+    assert res.json()["state"] == "pending"
+    assert len(fake_queue.enqueued) == 1

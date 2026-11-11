@@ -86,4 +86,30 @@ async def test_task_failure_reverts_status(db: AsyncSession, monkeypatch):
         await register_agent(ctx, str(agent.id))
 
     await db.refresh(agent)
-    assert agent.status == AgentStatus.PROVISIONING
+    assert agent.status == AgentStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_production_failure_is_persisted_and_reported(api, db: AsyncSession, monkeypatch):
+    """The arq worker passes no session: the failure must survive the raise."""
+    from tests.conftest import TestSessionLocal
+
+    stub = StubERC8004Client(success=False)
+    mock_signer = MagicMock(address="0x000000000000000000000000000000000000dead")
+    monkeypatch.setattr("app.data_plane.workers.tasks.erc8004_agent", lambda wallet: stub)
+    monkeypatch.setattr("app.data_plane.workers.tasks.agent_signer", lambda wallet: mock_signer)
+    monkeypatch.setattr("app.data_plane.workers.tasks.SessionLocal", TestSessionLocal)
+
+    agent = await make_agent(db, status=AgentStatus.REGISTERING)
+    wallet = await make_wallet(db)
+    agent.wallet_id = wallet.id
+    await db.commit()
+
+    agent_id = agent.id
+    with pytest.raises(RuntimeError):
+        await register_agent({}, str(agent_id))
+
+    db.expire_all()  # the api fixture shares this session; drop its cached agent
+    res = await api.get(f"/api/v1/agents/{agent_id}/registration")
+    assert res.status_code == 200
+    assert res.json()["state"] == "failed"

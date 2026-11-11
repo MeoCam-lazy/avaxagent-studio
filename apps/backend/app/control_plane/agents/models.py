@@ -18,6 +18,7 @@ class AgentStatus(str, Enum):
     REGISTERING = "registering"  # ERC-8004 register tx in flight
     ACTIVE = "active"  # discoverable, accepting jobs
     PAUSED = "paused"
+    FAILED = "failed"  # ERC-8004 register tx failed; owner may retry
 
 
 class Agent(UUIDPrimaryKey, Timestamps, Base):

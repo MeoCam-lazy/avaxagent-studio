@@ -49,7 +49,7 @@ class RegistryService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail={"error": "wallet_required"},
             )
-        if agent.status != AgentStatus.PROVISIONING:
+        if agent.status not in (AgentStatus.PROVISIONING, AgentStatus.FAILED):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={"error": "agent_not_provisioning"},
