@@ -14,7 +14,7 @@ make infra
 
 # 2. Seed the 3 reference agents + demo jobs + ledger balances
 #    (Optional: pass --owner 0xYourMetaMaskAddress so the seeded earnings belong to your wallet)
-make seed
+(cd apps/backend && uv run python -m app.seed)
 
 # 3. Start backend services & frontend
 make api       # Terminal 1: Control Plane API (:8000)

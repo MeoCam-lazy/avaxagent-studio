@@ -117,7 +117,7 @@ make install        # uv sync --all-packages --all-extras + pnpm install
 make infra          # Postgres :5432 + Redis :6379
 make revision m="init"   # create the first migration (none ship yet)
 make migrate
-make seed           # seed 3 reference agents + sample demo jobs & USDC ledger
+cd apps/backend && uv run python -m app.seed   # seed 3 reference agents + demo jobs & ledger
 
 make api            # http://localhost:8000/docs   (control plane)
 make gateway        # http://localhost:8001        (A2A gateway)

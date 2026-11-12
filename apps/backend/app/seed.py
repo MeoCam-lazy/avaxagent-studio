@@ -82,24 +82,24 @@ REFERENCE_AGENTS: tuple[ReferenceAgentSpec, ...] = (
         demo_prompt="Summarize USDC liquidity and yield opportunities on Avalanche C-Chain.",
         demo_output=(
             "## Avalanche C-Chain USDC Yield & Liquidity Report\n\n"
-            "1. **Aave v3 (Avalanche)**: Supply APY ~4.8% on native USDC with deep utilization.\n"
+            "1. **Aave v3 (Avalanche)**: Supply APY ~4.8% on native USDC with deep liquidity.\n"
             "2. **Benqi Lending**: Stable borrow demand with AVAX liquid-staking collateral.\n"
             "3. **Trader Joe Liquidity Book**: Tight 1-bps bins on AVAX/USDC and EURC/USDC.\n"
-            "4. **Risk Note**: Prefer native Circle USDC (EIP-3009 enabled) for x402 settlement."
+            "4. **Risk Note**: Prefer native Circle USDC (EIP-3009) for x402 settlement."
         ),
     ),
     ReferenceAgentSpec(
         slug="solidity-security-auditor",
         name="Solidity Security Auditor",
         description=(
-            "Kiểm toán hợp đồng thông minh Solidity trên Avalanche: rà soát lỗ hổng reentrancy, "
-            "kiểm tra phân quyền, EIP-3009 TransferWithAuthorization, ERC-8004 và ERC-8183 escrow."
+            "Kiểm toán hợp đồng thông minh Solidity trên Avalanche: rà soát lỗ hổng "
+            "reentrancy, kiểm tra phân quyền, EIP-3009, ERC-8004 và ERC-8183 escrow."
         ),
         skills=["solidity-audit", "erc-8004", "erc-8183", "reentrancy-check"],
         system_prompt=(
             "You are Solidity Security Auditor, a smart-contract security specialist for "
-            "Avalanche EVM contracts. Audit Solidity code for reentrancy, access-control flaws, "
-            "signature replay (EIP-712 / EIP-3009), and ERC-8183 escrow state transitions."
+            "Avalanche EVM contracts. Audit Solidity code for reentrancy, access-control "
+            "flaws, signature replay (EIP-712 / EIP-3009), and ERC-8183 state transitions."
         ),
         temperature=0.1,
         price_atomic=500_000,  # 0.50 USDC
@@ -112,15 +112,15 @@ REFERENCE_AGENTS: tuple[ReferenceAgentSpec, ...] = (
             "preventing replay across x402 calls.\n"
             "- **[PASS] ERC-8183 Optimistic Dispute Window**: `OptimisticPolicy` enforces "
             "the dispute window before `router.settle(jobId)` can release funds.\n"
-            "- **[RECOMMENDATION]**: Verify `validBefore` margin >= 60s before relay broadcast."
+            "- **[RECOMMENDATION]**: Verify `validBefore` margin >= 60s before broadcast."
         ),
     ),
     ReferenceAgentSpec(
         slug="avalanche-ecosystem-concierge",
         name="Avalanche Ecosystem Concierge",
         description=(
-            "Trợ lý đa ngôn ngữ (Việt / Anh) hướng dẫn tích hợp A2A protocol, thanh toán vi mô "
-            "x402 bằng USDC trên Avalanche Fuji/Mainnet và đăng ký danh tính agent ERC-8004."
+            "Trợ lý đa ngôn ngữ (Việt / Anh) hướng dẫn tích hợp A2A protocol, thanh toán "
+            "x402 bằng USDC trên Avalanche Fuji/Mainnet và đăng ký danh tính ERC-8004."
         ),
         skills=["translation", "summarization", "a2a-protocol", "avalanche-docs"],
         system_prompt=(
@@ -135,7 +135,7 @@ REFERENCE_AGENTS: tuple[ReferenceAgentSpec, ...] = (
         demo_prompt="Hướng dẫn gọi agent qua A2A gateway và thanh toán x402 trên Avalanche Fuji.",
         demo_output=(
             "## Hướng dẫn gọi Agent qua A2A + x402 trên Avalanche Fuji\n\n"
-            "1. Gửi `POST /agents/{slug}/a2a` để nhận phản hồi `HTTP 402` kèm thông tin `accepts`.\n"
+            "1. Gửi `POST /agents/{slug}/a2a` để nhận `HTTP 402` kèm thông tin `accepts`.\n"
             "2. Ký ủy quyền `TransferWithAuthorization` (EIP-3009) cho USDC trên chain `43113`.\n"
             "3. Gửi lại request kèm header `X-PAYMENT` — Gateway sẽ quyết toán on-chain và trả "
             "về `task.id` để theo dõi kết quả."
@@ -171,9 +171,8 @@ async def seed_reference_agents(
     jobs_created = 0
 
     for idx, spec in enumerate(REFERENCE_AGENTS, start=1):
-        existing = (
-            await db.execute(select(Agent).where(Agent.slug == spec.slug))
-        ).scalar_one_or_none()
+        stmt = select(Agent).where(Agent.slug == spec.slug)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if existing is None and provision_live:
             created = await AgentService(db).create(
@@ -195,12 +194,10 @@ async def seed_reference_agents(
                 ),
             )
             await WalletService(db).provision(normalized_owner, created.id)
-            await RegistryService(db).register(
-                normalized_owner, created.id, RegistrationRequest()
-            )
-            agent = (
-                await db.execute(select(Agent).where(Agent.id == created.id))
-            ).scalar_one()
+            reg_req = RegistrationRequest()
+            await RegistryService(db).register(normalized_owner, created.id, reg_req)
+            created_stmt = select(Agent).where(Agent.id == created.id)
+            agent = (await db.execute(created_stmt)).scalar_one()
             seeded_agents.append(agent)
             continue
 
@@ -261,7 +258,12 @@ async def seed_reference_agents(
 
         if include_demo_activity:
             created_now = await _ensure_demo_job_and_ledger(
-                db, agent=agent, spec=spec, idx=idx, chain_id=cid, asset=asset_addr
+                db,
+                agent=agent,
+                spec=spec,
+                idx=idx,
+                chain_id=cid,
+                asset=asset_addr,
             )
             if created_now:
                 jobs_created += 1
@@ -276,12 +278,13 @@ async def seed_reference_agents(
 
 
 async def _ensure_demo_wallet(
-    db: AsyncSession, spec: ReferenceAgentSpec, chain_id: int
+    db: AsyncSession,
+    spec: ReferenceAgentSpec,
+    chain_id: int,
 ) -> Wallet:
     checksum_addr = Web3.to_checksum_address(spec.demo_wallet_address)
-    wallet = (
-        await db.execute(select(Wallet).where(Wallet.address == checksum_addr))
-    ).scalar_one_or_none()
+    stmt = select(Wallet).where(Wallet.address == checksum_addr)
+    wallet = (await db.execute(stmt)).scalar_one_or_none()
     if wallet is None:
         wallet = Wallet(
             provider="turnkey",
@@ -306,9 +309,8 @@ async def _ensure_demo_job_and_ledger(
     asset: str,
 ) -> bool:
     nonce = f"0x{idx:02x}" + "aa" * 31
-    existing_job = (
-        await db.execute(select(Job).where(Job.payment_nonce == nonce))
-    ).scalar_one_or_none()
+    stmt = select(Job).where(Job.payment_nonce == nonce)
+    existing_job = (await db.execute(stmt)).scalar_one_or_none()
     if existing_job is not None:
         return False
 
@@ -364,7 +366,7 @@ async def _ensure_demo_job_and_ledger(
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Seed 3 reference agents and demo activity for Avaxagent Studio."
+        description="Seed 3 reference agents and demo activity for Avaxagent Studio.",
     )
     parser.add_argument(
         "--owner",

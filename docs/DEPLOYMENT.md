@@ -60,7 +60,7 @@ make infra            # Starts PostgreSQL (:5432) and Redis (:6379)
 Run the idempotent seed script to create the 3 reference agents, their Turnkey wallet metadata, ERC-8004 agent URIs, sample settled A2A jobs, deliverables, and USDC ledger/earnings balances:
 
 ```bash
-make seed
+cd apps/backend && uv run python -m app.seed
 ```
 
 To bind ownership of the 3 seeded reference agents to your own connected browser wallet address (so they also appear under **Agents của bạn** and **Ví / Thu nhập** when you sign in with SIWE):
@@ -111,7 +111,7 @@ docker compose --profile apps up -d --build
 Then seed the database against the running Postgres container:
 
 ```bash
-make seed
+cd apps/backend && uv run python -m app.seed
 ```
 
 ---
@@ -126,7 +126,7 @@ make seed
 Once `TURNKEY_*` and `RELAYER_*` are set in `apps/backend/.env` and `make worker` is running:
 
 ```bash
-make seed-live
+cd apps/backend && uv run python -m app.seed --live
 # or with a custom owner address:
 cd apps/backend && uv run python -m app.seed --live --owner 0xYourWalletAddress
 ```
