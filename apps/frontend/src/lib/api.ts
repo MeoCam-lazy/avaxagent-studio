@@ -157,16 +157,14 @@ export const api = {
 
   billing: {
     fees: () => request<FeeSchedule>("/billing/fees"),
-    summary: (agentId?: string) => {
-      const q =
-        typeof agentId === "string" && agentId ? `?agent_id=${encodeURIComponent(agentId)}` : "";
-      return request<EarningsSummary>(`/billing/summary${q}`);
-    },
-    ledger: (agentId?: string) => {
-      const q =
-        typeof agentId === "string" && agentId ? `?agent_id=${encodeURIComponent(agentId)}` : "";
-      return request<LedgerEntry[]>(`/billing/ledger${q}`);
-    },
+    summary: (agentId?: string) =>
+      request<EarningsSummary>(
+        `/billing/summary${agentId ? `?agent_id=${encodeURIComponent(agentId)}` : ""}`,
+      ),
+    ledger: (agentId?: string) =>
+      request<LedgerEntry[]>(
+        `/billing/ledger${agentId ? `?agent_id=${encodeURIComponent(agentId)}` : ""}`,
+      ),
     payouts: () => request<Payout[]>("/billing/payouts"),
     requestPayout: (body: PayoutCreate) => request<Payout>("/billing/payouts", post(body)),
   },
