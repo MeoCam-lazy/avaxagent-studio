@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import DateTime, MetaData, Numeric, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 # Deterministic constraint names so Alembic autogenerate diffs are stable.
 NAMING_CONVENTION = {
@@ -17,8 +20,23 @@ NAMING_CONVENTION = {
     "pk": "pk_%(table_name)s",
 }
 
-#: uint256 token amounts (atomic units) fit in NUMERIC(78, 0).
-TokenAmount = Numeric(78, 0)
+
+class _TokenAmount(TypeDecorator[int]):
+    """uint256 token amounts (atomic units), stored as NUMERIC(78, 0).
+
+    The driver returns ``Decimal`` for NUMERIC; this loads exact ``int`` so
+    the ``Mapped[int]`` annotations hold. web3 rejects ``Decimal`` for
+    ``uint256``, and float (``asdecimal=False``) would lose precision.
+    """
+
+    impl = Numeric(78, 0)
+    cache_ok = True
+
+    def process_result_value(self, value: Decimal | None, dialect: Any) -> int | None:
+        return None if value is None else int(value)
+
+
+TokenAmount = _TokenAmount()
 
 
 class Base(DeclarativeBase):
