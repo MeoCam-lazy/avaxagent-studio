@@ -1,0 +1,30 @@
+# Edge for the compose stack (docker-compose.yml, service "web").
+#
+# STUDIO_SITE / GATEWAY_SITE are Caddy site addresses:
+#   local:  ":80" and ":8001" (plain HTTP on those ports)
+#   server: "studio.example.com" and "gateway.example.com" (automatic HTTPS)
+
+{$STUDIO_SITE} {
+	encode zstd gzip
+
+	# Same origin for the SPA and its API: no CORS, and SIWE sees one domain.
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /health {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		# Client-side routes (/marketplace/:slug, /jobs/:id) fall back to the SPA.
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Public A2A gateway: agent cards, x402 challenges and paid calls.
+{$GATEWAY_SITE} {
+	encode zstd gzip
+	reverse_proxy gateway:8001
+}

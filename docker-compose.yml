@@ -1,15 +1,45 @@
-# Local infrastructure for avaxagent-studio.
+# avaxagent-studio stack.
+#
 #   docker compose up -d postgres redis      # infra only (run apps from source)
-#   docker compose --profile apps up -d      # infra + backend processes
+#   docker compose --profile apps up -d      # full stack behind Caddy
+#
+# Full stack: backend settings come from apps/backend/.env (copy .env.example).
+# Compose-level settings (POSTGRES_PASSWORD, STUDIO_SITE, GATEWAY_SITE, ports)
+# come from a .env next to this file. See docs/DEPLOYMENT.md, section 4.
+
+x-backend: &backend
+  profiles: ["apps"]
+  build: { context: ., dockerfile: apps/backend/Dockerfile }
+  image: avaxagent-studio-backend
+  env_file:
+    - path: apps/backend/.env
+      required: false
+  environment:
+    # Container networking wins over the localhost URLs in apps/backend/.env.
+    DATABASE_URL: postgresql+asyncpg://studio:${POSTGRES_PASSWORD:-studio}@postgres:5432/studio
+    REDIS_URL: redis://redis:6379/0
+    # The worker writes deliverables, the API and gateway read them: one volume.
+    STORAGE_LOCAL_PATH: /data
+  volumes: [agentdata:/data]
+  restart: unless-stopped
+  depends_on:
+    migrate: { condition: service_completed_successfully }
+    redis: { condition: service_healthy }
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: studio
-      POSTGRES_PASSWORD: studio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studio}
       POSTGRES_DB: studio
-    ports: ["5432:5432"]
+    # Loopback only (IPv4 and IPv6, since "localhost" may resolve to ::1 first):
+    # never expose the database on a server's public interface.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "[::1]:${POSTGRES_PORT:-5432}:5432"
     volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U studio"]
       interval: 5s
@@ -17,49 +47,65 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - "[::1]:${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # ── One-shot: apply migrations before any app process starts ────────────
+  migrate:
+    <<: *backend
+    command: alembic upgrade head
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
 
   # ── Control plane ────────────────────────────────────────────────────────
   api:
-    profiles: ["apps"]
-    build: { context: ., dockerfile: apps/backend/Dockerfile }
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-    environment: &backend-env
-      DATABASE_URL: postgresql+asyncpg://studio:studio@postgres:5432/studio
-      REDIS_URL: redis://redis:6379/0
-      NETWORK: avalanche-fuji
-    ports: ["8000:8000"]
-    depends_on: [postgres, redis]
+    <<: *backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
 
   # ── Data plane ───────────────────────────────────────────────────────────
   gateway:
-    profiles: ["apps"]
-    build: { context: ., dockerfile: apps/backend/Dockerfile }
-    command: uvicorn app.data_plane.gateway.main:app --host 0.0.0.0 --port 8001
-    environment: *backend-env
-    ports: ["8001:8001"]
-    depends_on: [postgres, redis]
+    <<: *backend
+    command: uvicorn app.data_plane.gateway.main:app --host 0.0.0.0 --port 8001 --proxy-headers --forwarded-allow-ips=*
 
   indexer:
-    profiles: ["apps"]
-    build: { context: ., dockerfile: apps/backend/Dockerfile }
+    <<: *backend
     command: python -m app.data_plane.indexer
-    environment: *backend-env
-    depends_on: [postgres, redis]
 
   worker:
-    profiles: ["apps"]
-    build: { context: ., dockerfile: apps/backend/Dockerfile }
+    <<: *backend
     command: arq app.data_plane.workers.settings.WorkerSettings
-    environment: *backend-env
-    depends_on: [postgres, redis]
 
   settler:
-    profiles: ["apps"]
-    build: { context: ., dockerfile: apps/backend/Dockerfile }
+    <<: *backend
     command: python -m app.data_plane.settler
-    environment: *backend-env
-    depends_on: [postgres, redis]
+
+  # ── Edge: frontend + TLS + reverse proxy (Caddy) ─────────────────────────
+  web:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    image: avaxagent-studio-web
+    environment:
+      # Local defaults; on a server set real hostnames and Caddy gets HTTPS certs.
+      STUDIO_SITE: ${STUDIO_SITE:-:80}
+      GATEWAY_SITE: ${GATEWAY_SITE:-:8001}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${GATEWAY_PORT:-8001}:8001"
+    volumes: [caddydata:/data]
+    restart: unless-stopped
+    depends_on: [api, gateway]
 
 volumes:
   pgdata:
+  agentdata:
+  caddydata:
