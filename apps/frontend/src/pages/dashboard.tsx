@@ -15,7 +15,10 @@ import type { Agent } from "@/lib/types";
 
 export function DashboardPage() {
   const network = useNetwork();
-  const summary = useQuery({ queryKey: ["billing", "summary"], queryFn: api.billing.summary });
+  const summary = useQuery({
+    queryKey: ["billing", "summary"],
+    queryFn: () => api.billing.summary(),
+  });
   const agents = useQuery({ queryKey: ["agents"], queryFn: api.agents.list });
 
   return (

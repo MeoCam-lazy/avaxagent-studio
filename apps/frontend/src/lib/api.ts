@@ -157,8 +157,14 @@ export const api = {
 
   billing: {
     fees: () => request<FeeSchedule>("/billing/fees"),
-    summary: () => request<EarningsSummary>("/billing/summary"),
-    ledger: () => request<LedgerEntry[]>("/billing/ledger"),
+    summary: (agentId?: string) =>
+      request<EarningsSummary>(
+        `/billing/summary${agentId ? `?agent_id=${encodeURIComponent(agentId)}` : ""}`,
+      ),
+    ledger: (agentId?: string) =>
+      request<LedgerEntry[]>(
+        `/billing/ledger${agentId ? `?agent_id=${encodeURIComponent(agentId)}` : ""}`,
+      ),
     payouts: () => request<Payout[]>("/billing/payouts"),
     requestPayout: (body: PayoutCreate) => request<Payout>("/billing/payouts", post(body)),
   },

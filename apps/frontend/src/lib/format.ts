@@ -44,5 +44,6 @@ export function assetLabel(
   if (network && asset.toLowerCase() === network.payment_asset_address.toLowerCase()) {
     return network.payment_asset;
   }
+  if (!asset.startsWith("0x")) return asset;
   return shortAddress(asset);
 }
