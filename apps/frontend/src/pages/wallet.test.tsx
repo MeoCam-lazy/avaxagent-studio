@@ -148,10 +148,10 @@ describe("WalletPage", () => {
     renderWithProviders(<WalletPage />);
 
     expect(await screen.findByTestId("withdrawable-balance")).toHaveTextContent("7.5 USDC");
-    expect(screen.getByText("10 USDC")).toBeInTheDocument();
-    expect(screen.getByText("0.5 USDC")).toBeInTheDocument();
-    expect(screen.getByText("9.5 USDC")).toBeInTheDocument();
-    expect(screen.getByText("2 USDC")).toBeInTheDocument();
+    expect(screen.getAllByText("10 USDC")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("0.5 USDC")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("9.5 USDC")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("2 USDC")[0]).toBeInTheDocument();
 
     // Studio fee schedule breakdown (5% = 500 bps, 95% net to agent)
     expect(await screen.findByText("5% (500 bps)")).toBeInTheDocument();
