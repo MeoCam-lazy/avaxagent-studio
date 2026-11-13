@@ -1,0 +1,19 @@
+# Keep secrets and local state out of every image build context.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.key
+**/*.pem
+**/.agent-data
+
+# Rebuilt inside the images.
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+apps/frontend/dist
+
+.git
+.claude

@@ -129,7 +129,7 @@ make fuji-fork && make test-fuji-fork   # end-to-end on a Fuji fork (docs/FUJI_E
 make lint           # ruff + eslint
 ```
 
-You can also run everything in Docker: `docker compose --profile apps up`.
+You can also run the whole stack in Docker behind Caddy: `docker compose --profile apps up -d --build` (see docs/DEPLOYMENT.md, section 4).
 
 ## Configuration (backend)
 
