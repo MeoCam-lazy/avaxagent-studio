@@ -117,6 +117,7 @@ make install        # uv sync --all-packages --all-extras + pnpm install
 make infra          # Postgres :5432 + Redis :6379
 make revision m="init"   # create the first migration (none ship yet)
 make migrate
+cd apps/backend && uv run python -m app.seed   # seed 3 reference agents + demo jobs & ledger
 
 make api            # http://localhost:8000/docs   (control plane)
 make gateway        # http://localhost:8001        (A2A gateway)
@@ -160,4 +161,4 @@ You can also run everything in Docker: `docker compose --profile apps up`.
 
 The frontend reads `VITE_API_URL` (default `/api/v1`, served through the Vite dev proxy).
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architecture details, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for environment & live Fuji/Mainnet deployment instructions, and [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) for the pitch & live demo walkthrough.
