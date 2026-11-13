@@ -177,3 +177,21 @@ async def test_disabled_stream_skipped(db: AsyncSession, monkeypatch):
     async with TestSessionLocal() as s:
         cursor_db = await s.get(IndexerCursor, (chain_id, "stream.disabled"))
         assert cursor_db is None
+
+
+def test_process_entrypoint_constructs_with_defaults(monkeypatch):
+    """``python -m app.data_plane.indexer`` builds ``ChainIndexer()`` with no args.
+
+    Like ``SettleBot`` / ``PayoutExecutor``, the process defaults to the app
+    session factory and the configured chain reader. Without defaults the
+    indexer process crashed on start (found by running the compose stack).
+    """
+    from app.data_plane.indexer import service
+
+    reader = FakeChainReader()
+    monkeypatch.setattr(service, "get_chain_reader", lambda: reader)
+
+    indexer = ChainIndexer()
+
+    assert indexer.session_factory is service.SessionLocal
+    assert indexer.reader is reader

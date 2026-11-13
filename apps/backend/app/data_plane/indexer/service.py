@@ -16,11 +16,12 @@ from collections.abc import Callable
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.chain import network as net
-from app.chain.reader import ChainReader
+from app.chain.reader import ChainReader, get_chain_reader
 from app.core.config import settings
 from app.data_plane.indexer.models import IndexerCursor
 from app.data_plane.indexer.streams import Stream
 from app.data_plane.indexer.streams import streams as default_streams
+from app.db.session import SessionLocal
 
 log = logging.getLogger(__name__)
 
@@ -30,14 +31,15 @@ class ChainIndexer:
 
     def __init__(
         self,
-        session_factory: async_sessionmaker[AsyncSession] | Callable[[], AsyncSession],
-        reader: ChainReader,
+        session_factory: async_sessionmaker[AsyncSession]
+        | Callable[[], AsyncSession] = SessionLocal,
+        reader: ChainReader | None = None,
         streams: list[Stream] | None = None,
         batch_size: int = 2000,
         chain_id: int | None = None,
     ) -> None:
         self.session_factory = session_factory
-        self.reader = reader
+        self.reader = reader or get_chain_reader()
         self.streams = streams
         self.batch_size = batch_size
         self._chain_id = chain_id
