@@ -1,10 +1,11 @@
-import { NavLink } from "react-router-dom";
-import { Bot, LayoutDashboard, ListChecks, Store, Wallet } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
+import { Bot, Home, LayoutDashboard, ListChecks, Store, Wallet } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+const NAV: { to: string; label: string; icon: typeof Home; end?: boolean }[] = [
+  { to: "/", label: "Trang chủ", icon: Home, end: true },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/marketplace", label: "Marketplace", icon: Store },
   { to: "/wallet", label: "Ví / Thu nhập", icon: Wallet },
@@ -14,12 +15,12 @@ const NAV = [
 export function Sidebar() {
   return (
     <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-60 shrink-0 flex-col border-r md:flex">
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="bg-primary text-primary-foreground grid size-7 place-items-center rounded-md text-sm font-bold">
+      <Link to="/" className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4 transition-colors hover:bg-sidebar-accent">
+        <div className="bg-primary text-primary-foreground grid size-7 place-items-center rounded-md text-sm font-bold shadow-[0_0_12px_rgba(232,65,66,0.4)]">
           A
         </div>
         <span className="font-semibold">Avaxagent Studio</span>
-      </div>
+      </Link>
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
