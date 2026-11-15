@@ -11,12 +11,16 @@ import { cn } from "@/lib/utils";
 
 export function LandingNavbar() {
   const { address, isConnected } = useAccount();
-  const [isPill, setIsPill] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsPill(window.scrollY > 80);
+      // Ẩn thanh navbar trong suốt quá trình cuộn thưởng thức Parallax Hero
+      // Chỉ hiện ra khi người dùng cuộn tới các section nội dung (Marketplace, Architecture)
+      const threshold = window.innerHeight * 2.1;
+      setIsVisible(window.scrollY >= threshold);
     };
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -25,9 +29,10 @@ export function LandingNavbar() {
     <header
       className={cn(
         "fixed z-50 flex items-center justify-between transition-all duration-500 ease-out",
-        isPill
-          ? "top-3 left-4 right-4 mx-auto h-14 max-w-4xl rounded-full border border-white/20 bg-[#07080D]/85 px-6 backdrop-blur-2xl shadow-[0_10px_35px_rgba(0,0,0,0.85)]"
-          : "top-0 left-0 right-0 h-16 border-b border-white/10 bg-[#07080D]/75 px-4 backdrop-blur-xl sm:px-8"
+        "top-3 left-4 right-4 mx-auto h-14 max-w-4xl rounded-full border border-white/20 bg-[#07080D]/90 px-6 backdrop-blur-2xl shadow-[0_10px_35px_rgba(0,0,0,0.85)]",
+        isVisible
+          ? "translate-y-0 opacity-100 pointer-events-auto"
+          : "-translate-y-12 opacity-0 pointer-events-none"
       )}
     >
       {/* Brand Logo */}
@@ -39,11 +44,6 @@ export function LandingNavbar() {
           <span className="text-xs sm:text-sm font-black tracking-wider text-white">
             AVAXAGENT <span className="text-[#E84142]">STUDIO</span>
           </span>
-          {!isPill && (
-            <span className="font-mono text-[9px] tracking-widest text-slate-400 uppercase hidden sm:block">
-              Avalanche C-Chain · Fuji
-            </span>
-          )}
         </div>
       </Link>
 
