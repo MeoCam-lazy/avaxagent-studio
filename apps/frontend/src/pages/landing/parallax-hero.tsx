@@ -90,40 +90,40 @@ export function ParallaxHero() {
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 2 (0.24 -> 0.50): HIỆN RA CHỮ AVAXAGENT STUDIO TRÊN NỀN TRỜI & ĐỈNH NÚI
-      // ---------------------------------------------------------------------
-      if (headlineRef.current) {
-        tl.fromTo(
-          headlineRef.current,
-          { opacity: 0, y: 40, scale: 0.92 },
-          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 26 },
-          24
-        );
-        // Sau đó giữ ổn định làm tâm điểm sang trọng
-        tl.to(headlineRef.current, { scale: 1.04, ease: "none", duration: 50 }, 50);
-      }
-
-      // ---------------------------------------------------------------------
-      // PHASE 3 (0.45 -> 0.74): TRẦN HANG ĐỘNG CAVE.PNG BUÔNG / UỐN XUỐNG
+      // PHASE 2 (0.28 -> 0.56): VÒM HANG CAVE.PNG CAMERA PULL-BACK (DOLLY OUT)
+      // Khóa chặt trục Y, vòm hang từ ngoài mép màn hình nhẹ nhàng thu lại ôm khung cảnh
       // ---------------------------------------------------------------------
       if (caveRef.current) {
         tl.fromTo(
           caveRef.current,
-          { opacity: 0, yPercent: -45, scale: 1.08 },
-          { opacity: 1, yPercent: 0, scale: 1.0, ease: "power2.out", duration: 28 },
-          45
+          { opacity: 0, scale: 1.35, y: 0 },
+          { opacity: 1, scale: 1.0, y: 0, ease: "power1.out", duration: 28 },
+          28
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 4 (0.68 -> 0.94): EXPLORER.PNG TO RÕ SỪNG SỮNG TRÊN MỎM TUYẾT
+      // PHASE 3 (0.52 -> 0.76): EXPLORER.PNG XUẤT HIỆN SỪNG SỮNG TRÊN MỎM TUYẾT
       // ---------------------------------------------------------------------
       if (explorerRef.current) {
         tl.fromTo(
           explorerRef.current,
-          { opacity: 0, y: 130, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 25 },
-          68
+          { opacity: 0, y: 40, scale: 0.94 },
+          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 24 },
+          52
+        );
+      }
+
+      // ---------------------------------------------------------------------
+      // PHASE 4 (0.72 -> 0.96): CHỮ AVAXAGENT STUDIO BỪNG SÁNG (TITLE DROP CLIMAX)
+      // Xuất hiện kiêu hãnh ngay khoảng trời mở giữa vòm hang và đỉnh núi
+      // ---------------------------------------------------------------------
+      if (headlineRef.current) {
+        tl.fromTo(
+          headlineRef.current,
+          { opacity: 0, y: 35, scale: 0.92 },
+          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 24 },
+          72
         );
       }
     }, containerRef);
@@ -153,30 +153,7 @@ export function ParallaxHero() {
           style={{ zIndex: 2 }}
         />
 
-        {/* Layer 3: Cinematic Headline (Nằm trên khoảng trời quang đãng ngay trên đỉnh núi) */}
-        <div
-          ref={headlineRef}
-          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto"
-          style={{ zIndex: 3 }}
-        >
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-2.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#E84142] animate-pulse" />
-            <span className="text-[11px] font-semibold tracking-wider text-slate-200 uppercase font-mono">
-              The Autonomous AI Agent Studio · Avalanche C-Chain
-            </span>
-          </div>
-
-          {/* Elegant Scaled Headline */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white drop-shadow-[0_12px_35px_rgba(0,0,0,0.95)] leading-tight">
-            AVAXAGENT
-          </h1>
-          <div className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-[0.3em] uppercase bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent drop-shadow-[0_8px_25px_rgba(0,0,0,0.95)] mt-0.5">
-            STUDIO
-          </div>
-        </div>
-
-        {/* Layer 4: Clouds Parting & Dense Initial Mist Covering (Che kín ở scroll = 0) */}
+        {/* Layer 3: Clouds Parting & Dense Initial Mist Covering (Che kín ở scroll = 0) */}
         <img
           ref={cloud03Ref}
           src="/assets/bxcmuse/clouds03.png"
@@ -234,7 +211,7 @@ export function ParallaxHero() {
           style={{ zIndex: 7 }}
         />
 
-        {/* Layer 5: Trần hang động Cave.png (Vòm thạch nhũ rủ trên đỉnh khung hình) */}
+        {/* Layer 4: Trần hang động Cave.png (Camera Dolly-Back: mở rộng từ ngoài mép màn hình vào) */}
         <img
           ref={caveRef}
           src="/assets/bxcmuse/Cave.png"
@@ -243,7 +220,7 @@ export function ParallaxHero() {
           style={{ zIndex: 10 }}
         />
 
-        {/* Layer 6: Explorer.png (Nhà thám hiểm nổi lên to rõ, uy nghi trên mỏm tuyết trung tâm) */}
+        {/* Layer 5: Explorer.png (Nhà thám hiểm nổi lên to rõ, uy nghi trên mỏm tuyết trung tâm) */}
         <img
           ref={explorerRef}
           src="/assets/bxcmuse/Explorer_cropped.png"
@@ -251,6 +228,29 @@ export function ParallaxHero() {
           className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[125vw] sm:w-[110vw] max-w-none h-auto object-contain object-bottom select-none will-change-transform drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)]"
           style={{ zIndex: 12 }}
         />
+
+        {/* Layer 6: Cinematic Headline (Bừng sáng sau cùng - Title Drop Climax) */}
+        <div
+          ref={headlineRef}
+          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto"
+          style={{ zIndex: 14 }}
+        >
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-2.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#E84142] animate-pulse" />
+            <span className="text-[11px] font-semibold tracking-wider text-slate-200 uppercase font-mono">
+              The Autonomous AI Agent Studio · Avalanche C-Chain
+            </span>
+          </div>
+
+          {/* Elegant Scaled Headline */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white drop-shadow-[0_12px_35px_rgba(0,0,0,0.95)] leading-tight">
+            AVAXAGENT
+          </h1>
+          <div className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-[0.3em] uppercase bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent drop-shadow-[0_8px_25px_rgba(0,0,0,0.95)] mt-0.5">
+            STUDIO
+          </div>
+        </div>
 
         {/* Pure Typographic Scroll Cue with Downward Chevron (Chữ thuần + dấu chevron hướng xuống) */}
         <div
