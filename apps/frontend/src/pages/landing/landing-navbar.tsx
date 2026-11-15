@@ -29,14 +29,14 @@ export function LandingNavbar() {
     <header
       className={cn(
         "fixed z-50 flex items-center justify-between transition-all duration-500 ease-out",
-        "top-3 left-4 right-4 mx-auto h-14 max-w-4xl rounded-full border border-slate-200/90 bg-white/92 px-6 backdrop-blur-2xl shadow-[0_12px_35px_rgba(15,23,42,0.08)]",
+        "top-3 left-4 right-4 mx-auto h-14 max-w-5xl rounded-full border border-slate-200/90 bg-white/95 px-5 sm:px-6 backdrop-blur-2xl shadow-[0_12px_35px_rgba(15,23,42,0.08)]",
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "-translate-y-12 opacity-0 pointer-events-none"
       )}
     >
       {/* Brand Logo */}
-      <Link to="/" className="group flex items-center gap-3">
+      <Link to="/" className="group flex items-center gap-2.5 sm:gap-3 shrink-0">
         <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#E84142] to-[#A81D20] text-white font-black shadow-[0_0_20px_rgba(232,65,66,0.4)] transition-transform group-hover:scale-105">
           <Flame className="h-4 w-4 sm:h-5 sm:w-5 fill-white" />
         </div>
@@ -48,7 +48,7 @@ export function LandingNavbar() {
       </Link>
 
       {/* Navigation Links */}
-      <nav className="hidden items-center gap-6 md:flex">
+      <nav className="hidden items-center gap-5 lg:gap-6 md:flex">
         <a
           href="#marketplace-preview"
           className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
@@ -76,15 +76,14 @@ export function LandingNavbar() {
       </nav>
 
       {/* Action / Connect Wallet */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {isConnected ? (
           <Link to="/dashboard">
             <Button
-              variant="outline"
               size="sm"
-              className="border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 hover:bg-slate-100"
+              className="bg-[#E84142] hover:bg-[#D33738] text-white text-xs font-semibold shadow-sm h-8 px-3"
             >
-              <span>Dashboard ({shortAddress(address ?? "")})</span>
+              <span>Dashboard</span>
               <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -93,7 +92,7 @@ export function LandingNavbar() {
             <Button
               variant="ghost"
               size="sm"
-              className="hidden text-xs font-semibold text-slate-600 hover:text-slate-900 sm:inline-flex"
+              className="hidden text-xs font-semibold text-slate-600 hover:text-slate-900 sm:inline-flex h-8"
             >
               Explore Agents
             </Button>
