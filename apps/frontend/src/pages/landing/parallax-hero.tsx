@@ -24,6 +24,10 @@ export function ParallaxHero() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
+      // Đảm bảo trạng thái ban đầu của các asset tầng sau luôn là opacity 0 (chống FOUC khi tải trang)
+      gsap.set([caveRef.current, explorerRef.current, headlineRef.current], { opacity: 0 });
+      gsap.set(mountRef.current, { opacity: 0.15 });
+
       // 60 FPS GSAP ScrollTrigger Timeline with 1.0s scrubbed inertia across 300vh
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -149,8 +153,8 @@ export function ParallaxHero() {
           ref={mountRef}
           src="/assets/bxcmuse/Mountains.png"
           alt="Mountains"
-          className="pointer-events-none absolute top-[15%] sm:top-[18%] left-1/2 -translate-x-1/2 w-[110vw] sm:w-[104vw] max-w-none h-auto select-none will-change-transform drop-shadow-[0_15px_30px_rgba(0,0,0,0.7)]"
-          style={{ zIndex: 2 }}
+          className="pointer-events-none absolute top-[15%] sm:top-[18%] left-1/2 -translate-x-1/2 w-[110vw] sm:w-[104vw] max-w-none h-auto select-none will-change-transform drop-shadow-[0_15px_30px_rgba(0,0,0,0.7)] opacity-20"
+          style={{ zIndex: 2, opacity: 0.2 }}
         />
 
         {/* Layer 3: Clouds Parting & Dense Initial Mist Covering (Che kín ở scroll = 0) */}
@@ -211,29 +215,29 @@ export function ParallaxHero() {
           style={{ zIndex: 7 }}
         />
 
-        {/* Layer 4: Trần hang động Cave.png (Camera Dolly-Back: mở rộng từ ngoài mép màn hình vào) */}
+        {/* Layer 4: Trần hang động Cave.png (Ban đầu ẩn opacity 0, xuất hiện mượt mà khi cuộn tới Phase 2) */}
         <img
           ref={caveRef}
           src="/assets/bxcmuse/Cave.png"
           alt="Cave Frame"
-          className="pointer-events-none absolute -top-8 sm:-top-14 left-1/2 -translate-x-1/2 w-[115vw] sm:w-[112vw] max-w-none h-[112vh] object-fill select-none will-change-transform drop-shadow-[0_25px_50px_rgba(0,0,0,0.85)]"
-          style={{ zIndex: 10 }}
+          className="pointer-events-none absolute -top-8 sm:-top-14 left-1/2 -translate-x-1/2 w-[115vw] sm:w-[112vw] max-w-none h-[112vh] object-fill select-none will-change-transform drop-shadow-[0_25px_50px_rgba(0,0,0,0.85)] opacity-0"
+          style={{ zIndex: 10, opacity: 0 }}
         />
 
-        {/* Layer 5: Explorer.png (Nhà thám hiểm nổi lên to rõ, uy nghi trên mỏm tuyết trung tâm) */}
+        {/* Layer 5: Explorer.png (Ban đầu ẩn opacity 0, xuất hiện mượt mà khi cuộn tới Phase 3) */}
         <img
           ref={explorerRef}
           src="/assets/bxcmuse/Explorer_cropped.png"
           alt="Explorer"
-          className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[125vw] sm:w-[110vw] max-w-none h-auto object-contain object-bottom select-none will-change-transform drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)]"
-          style={{ zIndex: 12 }}
+          className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[125vw] sm:w-[110vw] max-w-none h-auto object-contain object-bottom select-none will-change-transform drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)] opacity-0"
+          style={{ zIndex: 12, opacity: 0 }}
         />
 
-        {/* Layer 6: Cinematic Headline (Bừng sáng sau cùng - Title Drop Climax) */}
+        {/* Layer 6: Cinematic Headline (Ban đầu ẩn opacity 0, bừng sáng sau cùng - Title Drop Climax) */}
         <div
           ref={headlineRef}
-          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto"
-          style={{ zIndex: 14 }}
+          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto opacity-0"
+          style={{ zIndex: 14, opacity: 0 }}
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-2.5">
