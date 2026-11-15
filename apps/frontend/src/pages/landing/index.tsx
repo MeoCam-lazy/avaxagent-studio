@@ -34,8 +34,8 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen w-full bg-[#08090E] text-slate-100 selection:bg-[#E84142] selection:text-white overflow-x-clip">
-      {/* Morphing Navbar (Full-width to centered glass pill) */}
+    <div className="relative min-h-screen w-full bg-[#F8FAFC] text-slate-900 selection:bg-[#E84142] selection:text-white overflow-x-clip">
+      {/* Morphing Navbar (Floating glass pill on white snow background) */}
       <LandingNavbar />
 
       {/* 1. GSAP ScrollTrigger 3D Cloud & Mountain Parallax Stage */}

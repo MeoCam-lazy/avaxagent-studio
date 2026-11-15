@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { ArrowDown } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -252,24 +251,24 @@ export function ParallaxHero() {
           style={{ zIndex: 12 }}
         />
 
-        {/* Initial Scroll Cue (Chỉ hiện ngay tại scroll = 0, mờ biến mất ngay khi cuộn) */}
+        {/* Minimalist Glacier Hairline Scroll Indicator (Thanh mảnh, tinh khôi, hòa vào sương tuyết) */}
         <div
           ref={scrollCueRef}
-          className="pointer-events-none absolute bottom-12 left-0 right-0 z-30 flex flex-col items-center justify-center gap-2 text-center select-none"
+          className="pointer-events-none absolute bottom-8 sm:bottom-10 left-0 right-0 z-30 flex flex-col items-center justify-center gap-2 text-center select-none"
         >
-          <div className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-black/70 px-4 py-2 backdrop-blur-md shadow-2xl">
-            <span className="font-mono text-xs font-bold tracking-widest uppercase text-slate-100">
-              Cuộn để khám phá
+          <div className="flex flex-col items-center gap-1.5 opacity-85">
+            <span className="font-mono text-[10px] font-bold tracking-[0.28em] uppercase text-slate-700 drop-shadow-sm">
+              CUỘN XUỐNG
             </span>
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#E84142] animate-bounce">
-              <ArrowDown className="h-3 w-3 text-white" />
+            <div className="relative h-7 w-[2px] overflow-hidden rounded-full bg-slate-400/50">
+              <div className="h-3.5 w-full rounded-full bg-[#E84142] animate-bounce" />
             </div>
           </div>
         </div>
 
-        {/* Soft Bottom Feather Fade into #08090E content sections */}
+        {/* Soft Bottom Feather Fade into #F8FAFC Snow White content sections */}
         <div
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#08090E] via-[#08090E]/60 to-transparent"
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/60 to-transparent"
           style={{ zIndex: 18 }}
         />
       </div>

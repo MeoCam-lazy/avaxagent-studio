@@ -100,13 +100,13 @@ export function TechFeaturesSection() {
     <section
       ref={sectionRef}
       id="architecture"
-      className="relative z-30 pt-16 pb-20 border-t border-white/10 overflow-hidden"
+      className="relative z-30 pt-16 pb-20 border-t border-slate-200 overflow-hidden bg-slate-50/60"
     >
       {/* Parallax Horizontal Marquee (Oversized typography sliding on scroll) */}
-      <div className="w-full overflow-hidden py-6 select-none opacity-40 pointer-events-none mb-10">
+      <div className="w-full overflow-hidden py-6 select-none opacity-60 pointer-events-none mb-10">
         <div
           ref={marqueeRef}
-          className="flex whitespace-nowrap text-4xl sm:text-6xl font-black font-mono tracking-widest uppercase text-transparent bg-gradient-to-r from-white/20 via-white/80 to-white/20 bg-clip-text will-change-transform"
+          className="flex whitespace-nowrap text-4xl sm:text-6xl font-black font-mono tracking-widest uppercase text-transparent bg-gradient-to-r from-slate-300 via-[#E84142]/40 to-slate-300 bg-clip-text will-change-transform"
           style={{ width: "250%" }}
         >
           <span>
@@ -124,27 +124,27 @@ export function TechFeaturesSection() {
           {METRICS.map((m, idx) => (
             <div
               key={idx}
-              className="metric-card-reveal rounded-2xl border border-white/10 bg-[#0C0E17]/80 p-5 backdrop-blur-xl shadow-lg will-change-transform"
+              className="metric-card-reveal rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] will-change-transform"
             >
-              <div className="text-3xl sm:text-4xl font-black text-white bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent font-mono">
+              <div className="text-3xl sm:text-4xl font-black text-[#E84142] font-mono">
                 {m.value}
               </div>
-              <div className="text-xs font-bold text-slate-200 mt-1">{m.label}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{m.desc}</div>
+              <div className="text-xs font-bold text-slate-800 mt-1">{m.label}</div>
+              <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">{m.desc}</div>
             </div>
           ))}
         </div>
 
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#FFA4A6] tracking-wider uppercase mb-2">
+          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#E84142] tracking-wider uppercase mb-2 bg-red-50 border border-red-200/80 px-3 py-1 rounded-full">
             <KeyRound className="w-3.5 h-3.5 text-[#E84142]" />
             Kiến trúc công nghệ UniHack
           </div>
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
             VÌ SAO CHỌN AVAXAGENT STUDIO?
           </h2>
-          <p className="text-sm sm:text-base text-slate-400 mt-2 font-light">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 font-light">
             Kết hợp hoàn hảo giữa Trí tuệ Nhân tạo (LLM), Hạ tầng Mật mã học (MPC Enclave) và Tốc độ giao dịch của Avalanche C-Chain.
           </p>
         </div>
@@ -156,25 +156,25 @@ export function TechFeaturesSection() {
             return (
               <div
                 key={idx}
-                className="pillar-card-reveal relative rounded-2xl border border-white/10 bg-[#0A0C14]/90 p-8 backdrop-blur-xl transition-all duration-300 hover:border-[#E84142]/40 hover:-translate-y-1 shadow-2xl flex flex-col justify-between will-change-transform"
+                className="pillar-card-reveal relative rounded-2xl border border-slate-200/90 bg-white p-8 shadow-[0_8px_30px_rgba(15,23,42,0.05)] transition-all duration-300 hover:border-[#E84142]/50 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between will-change-transform"
               >
                 <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E84142]/10 border border-[#E84142]/30 text-[#FFA4A6] mb-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 border border-red-200/80 text-[#E84142] mb-6">
                     <Icon className="h-6 w-6" />
                   </div>
 
-                  <h3 className="text-xl font-bold text-white">{p.title}</h3>
-                  <div className="text-xs font-medium text-[#E84142] mt-0.5 mb-3 font-mono">
+                  <h3 className="text-xl font-bold text-slate-900">{p.title}</h3>
+                  <div className="text-xs font-semibold text-[#E84142] mt-0.5 mb-3 font-mono">
                     {p.subtitle}
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-light mb-6">
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-light mb-6">
                     {p.desc}
                   </p>
                 </div>
 
-                <div className="space-y-2 border-t border-white/10 pt-4">
+                <div className="space-y-2 border-t border-slate-100 pt-4">
                   {p.bulletPoints.map((item, bIdx) => (
-                    <div key={bIdx} className="flex items-center gap-2 text-xs text-slate-300">
+                    <div key={bIdx} className="flex items-center gap-2 text-xs text-slate-700">
                       <CheckCircle2 className="h-3.5 w-3.5 text-[#E84142] shrink-0" />
                       <span>{item}</span>
                     </div>
@@ -185,26 +185,26 @@ export function TechFeaturesSection() {
           })}
         </div>
 
-        {/* Bottom CTA Banner */}
-        <div className="mt-20 rounded-3xl border border-[#E84142]/30 bg-gradient-to-r from-[#170B0E] via-[#0D0E18] to-[#0A0C14] p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_0_50px_rgba(232,65,66,0.15)]">
+        {/* Bottom CTA Banner (Rực rỡ Avalanche Red) */}
+        <div className="mt-20 rounded-3xl border border-red-500/20 bg-gradient-to-r from-[#E84142] via-[#D03031] to-[#A81D20] p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_15px_45px_rgba(232,65,66,0.35)] text-white">
           <div className="max-w-xl text-center md:text-left">
             <h3 className="text-2xl sm:text-3xl font-black text-white">
               Sẵn sàng trải nghiệm hoặc triển khai Agent của bạn?
             </h3>
-            <p className="text-sm text-slate-300 mt-2 font-light">
+            <p className="text-sm text-red-100 mt-2 font-light">
               Chạy trực tiếp trên Avalanche Fuji Testnet (Chain ID 43113). Đã vượt qua 805/805 unit và E2E tests.
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <Link to="/agents/new">
-              <Button size="lg" className="bg-[#E84142] hover:bg-[#D03031] text-xs sm:text-sm font-bold text-white shadow-[0_0_25px_rgba(232,65,66,0.5)]">
+              <Button size="lg" className="bg-white hover:bg-red-50 text-xs sm:text-sm font-bold text-[#E84142] shadow-xl">
                 <span>Khởi tạo Agent mới</span>
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button variant="outline" size="lg" className="border-white/20 bg-white/5 text-xs sm:text-sm text-slate-200 hover:bg-white/10">
+              <Button variant="outline" size="lg" className="border-white/30 bg-white/10 text-xs sm:text-sm text-white hover:bg-white/20">
                 Vào Dashboard
               </Button>
             </Link>
@@ -212,15 +212,15 @@ export function TechFeaturesSection() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-24 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+        <footer className="mt-24 pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <div>
             © 2026 <b>Avaxagent Studio</b> · Xây dựng cho cuộc thi <b>UniHack 2026</b> trên Avalanche.
           </div>
           <div className="flex items-center gap-6">
-            <a href="https://testnet.snowtrace.io" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
+            <a href="https://testnet.snowtrace.io" target="_blank" rel="noreferrer" className="hover:text-slate-800 transition-colors">
               Snowtrace Fuji
             </a>
-            <a href="https://github.com/CocDap/avax-agent" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition-colors">
+            <a href="https://github.com/CocDap/avax-agent" target="_blank" rel="noreferrer" className="hover:text-slate-800 transition-colors">
               GitHub Repo
             </a>
           </div>

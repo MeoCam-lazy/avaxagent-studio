@@ -78,22 +78,22 @@ export function LiveAgentsSection() {
       className="relative z-30 px-4 py-24 sm:px-8 max-w-7xl mx-auto"
     >
       {/* Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4 border-b border-slate-200 pb-6">
         <div>
-          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#FFA4A6] tracking-wider uppercase mb-2">
+          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#E84142] tracking-wider uppercase mb-2 bg-red-50 border border-red-200/80 px-3 py-1 rounded-full">
             <Sparkles className="w-3.5 h-3.5 text-[#E84142]" />
             Live Marketplace Agents
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
             KHÁM PHÁ CÁC AGENT ĐÃ SẴN SÀNG
           </h2>
-          <p className="text-sm text-slate-400 mt-1 max-w-xl">
+          <p className="text-sm text-slate-600 mt-1 max-w-xl">
             Các Agent tự quản đang hoạt động trên Avalanche Fuji. Bạn có thể thuê và thanh toán trực tiếp qua ví MetaMask chỉ với vài click.
           </p>
         </div>
 
         <Link to="/marketplace">
-          <Button variant="outline" className="border-white/20 bg-white/5 text-xs text-slate-200 hover:bg-white/10">
+          <Button variant="outline" className="border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-sm">
             <span>Xem toàn bộ Marketplace</span>
             <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
           </Button>
@@ -105,29 +105,29 @@ export function LiveAgentsSection() {
         {FEATURED_AGENTS.map((agent) => (
           <Card
             key={agent.slug}
-            className="agent-card-reveal group relative flex flex-col justify-between border-white/10 bg-[#0C0E17]/80 backdrop-blur-xl shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#E84142]/50 hover:shadow-[0_12px_30px_rgba(232,65,66,0.15)] will-change-transform"
+            className="agent-card-reveal group relative flex flex-col justify-between border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-[0_4px_25px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[#E84142]/60 hover:shadow-[0_12px_35px_rgba(232,65,66,0.12)] will-change-transform"
           >
             <CardHeader className="space-y-3 pb-3">
               <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#E84142]/20 to-[#E84142]/5 border border-[#E84142]/30 text-[#FFA4A6]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 border border-red-200/80 text-[#E84142]">
                   <Bot className="h-6 w-6" />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
+                  <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-[11px] font-semibold text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
                     active
                   </Badge>
-                  <Badge variant="outline" className="border-white/15 bg-white/5 text-[11px] text-slate-300 font-mono">
+                  <Badge variant="outline" className="border-slate-200 bg-slate-100 text-[11px] text-slate-600 font-mono">
                     {agent.erc8004Id}
                   </Badge>
                 </div>
               </div>
 
               <div>
-                <CardTitle className="text-lg font-bold text-white group-hover:text-[#FFA4A6] transition-colors">
+                <CardTitle className="text-lg font-bold text-slate-900 group-hover:text-[#E84142] transition-colors">
                   {agent.name}
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-400 mt-1 line-clamp-3 leading-relaxed">
+                <CardDescription className="text-xs text-slate-600 mt-1 line-clamp-3 leading-relaxed">
                   {agent.desc}
                 </CardDescription>
               </div>
@@ -139,7 +139,7 @@ export function LiveAgentsSection() {
                 {agent.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-300 border border-white/5"
+                    className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200/70"
                   >
                     #{tag}
                   </span>
@@ -147,10 +147,10 @@ export function LiveAgentsSection() {
               </div>
 
               {/* Price & Action */}
-              <div className="flex items-center justify-between border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                 <div>
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Phí dịch vụ</div>
-                  <div className="text-base font-extrabold text-[#E84142]">{agent.price}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">Phí dịch vụ</div>
+                  <div className="text-base font-black text-[#E84142]">{agent.price}</div>
                 </div>
 
                 <Link to={`/marketplace/${agent.slug}`}>
