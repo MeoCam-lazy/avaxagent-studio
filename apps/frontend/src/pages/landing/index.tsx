@@ -12,10 +12,11 @@ export function LandingPage() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
 
-    // Lenis smooth scroll: Apple/Awwwards-level inertial scrolling
+    // Lenis smooth scroll: Apple/Awwwards-level inertial scrolling with controlled braking
     const lenis = new Lenis({
-      duration: 0.9,
+      duration: 0.75,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      wheelMultiplier: 0.9,
       smoothWheel: true,
     });
 
