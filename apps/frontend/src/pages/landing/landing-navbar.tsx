@@ -17,7 +17,7 @@ export function LandingNavbar() {
     const handleScroll = () => {
       // Ẩn thanh navbar trong suốt quá trình cuộn thưởng thức Parallax Hero
       // Chỉ hiện ra khi người dùng cuộn tới các section nội dung (Marketplace, Architecture)
-      const threshold = window.innerHeight * 2.1;
+      const threshold = window.innerHeight * 3.05;
       setIsVisible(window.scrollY >= threshold);
     };
     handleScroll();
