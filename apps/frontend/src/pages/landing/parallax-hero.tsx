@@ -28,7 +28,7 @@ export function ParallaxHero() {
       gsap.set([caveRef.current, explorerRef.current, headlineRef.current], { opacity: 0 });
       gsap.set(mountRef.current, { opacity: 0.15 });
 
-      // 60 FPS GSAP ScrollTrigger Timeline with 0.5s scrubbed inertia across 260vh (snappy & natural flow)
+      // 60 FPS GSAP ScrollTrigger Timeline with 0.5s scrubbed inertia across 280vh
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: containerRef.current,
@@ -39,7 +39,7 @@ export function ParallaxHero() {
       });
 
       // ---------------------------------------------------------------------
-      // PHASE 1 (0.0 -> 0.32): MÂY CHE KÍN -> RẼ MÂY ĐỂ LỘ ĐỈNH NÚI TUYẾT & BẦU TRỜI
+      // PHASE 1 (0.0 -> 0.24): MÂY CHE KÍN -> RẼ MÂY ĐỂ LỘ ĐỈNH NÚI TUYẾT & BẦU TRỜI
       // ---------------------------------------------------------------------
       // Bầu trời zoom chiều sâu nhẹ nhàng
       if (skyRef.current) {
@@ -48,39 +48,39 @@ export function ParallaxHero() {
 
       // Lớp sương mây dày đặc che phủ 100% màn hình ban đầu tan biến dần
       if (mistRef.current) {
-        tl.to(mistRef.current, { opacity: 0, ease: "power1.inOut", duration: 22 }, 0);
+        tl.to(mistRef.current, { opacity: 0, ease: "power1.inOut", duration: 18 }, 0);
       }
 
       // Hướng dẫn cuộn ban đầu mờ dần ngay khi bắt đầu cuộn chuột
       if (scrollCueRef.current) {
-        tl.to(scrollCueRef.current, { opacity: 0, y: -25, ease: "power1.out", duration: 12 }, 0);
+        tl.to(scrollCueRef.current, { opacity: 0, y: -25, ease: "power1.out", duration: 10 }, 0);
       }
 
       // Cụm mây bên trái (clouds03, clouds07) rẽ dạt mạnh sang trái
       if (cloud03Ref.current) {
-        tl.to(cloud03Ref.current, { x: -550, opacity: 0.05, ease: "power1.out", duration: 30 }, 0);
+        tl.to(cloud03Ref.current, { x: -550, opacity: 0.05, ease: "power1.out", duration: 24 }, 0);
       }
       if (cloud07Ref.current) {
-        tl.to(cloud07Ref.current, { x: -480, opacity: 0.05, ease: "power1.out", duration: 30 }, 0);
+        tl.to(cloud07Ref.current, { x: -480, opacity: 0.05, ease: "power1.out", duration: 24 }, 0);
       }
 
       // Cụm mây bên phải (clouds09, clouds05, clouds11) rẽ dạt mạnh sang phải
       if (cloud09Ref.current) {
-        tl.to(cloud09Ref.current, { x: 480, opacity: 0.05, ease: "power1.out", duration: 30 }, 0);
+        tl.to(cloud09Ref.current, { x: 480, opacity: 0.05, ease: "power1.out", duration: 24 }, 0);
       }
       if (cloud05Ref.current) {
-        tl.to(cloud05Ref.current, { x: 550, opacity: 0.05, ease: "power1.out", duration: 30 }, 0);
+        tl.to(cloud05Ref.current, { x: 550, opacity: 0.05, ease: "power1.out", duration: 24 }, 0);
       }
       if (cloud11Ref.current) {
-        tl.to(cloud11Ref.current, { x: 580, opacity: 0.05, ease: "power1.out", duration: 30 }, 0);
+        tl.to(cloud11Ref.current, { x: 580, opacity: 0.05, ease: "power1.out", duration: 24 }, 0);
       }
 
       // Mây dưới và mây trên tản dần
       if (cloud01Ref.current) {
-        tl.to(cloud01Ref.current, { y: 160, opacity: 0.05, ease: "power1.out", duration: 28 }, 0);
+        tl.to(cloud01Ref.current, { y: 160, opacity: 0.05, ease: "power1.out", duration: 22 }, 0);
       }
       if (cloud02Ref.current) {
-        tl.to(cloud02Ref.current, { y: -120, opacity: 0.05, ease: "power1.out", duration: 28 }, 0);
+        tl.to(cloud02Ref.current, { y: -120, opacity: 0.05, ease: "power1.out", duration: 22 }, 0);
       }
 
       // Đỉnh núi tuyết Mountains.png lộ diện: hiển thị trọn vẹn đỉnh núi nhọn và sườn núi đón nắng
@@ -88,52 +88,53 @@ export function ParallaxHero() {
         tl.fromTo(
           mountRef.current,
           { opacity: 0.15, y: 40 },
-          { opacity: 1, y: 0, ease: "power1.out", duration: 32 },
+          { opacity: 1, y: 0, ease: "power1.out", duration: 24 },
           0
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 2 (0.26 -> 0.58): VÒM HANG CAVE.PNG CAMERA PULL-BACK (DOLLY OUT)
+      // PHASE 2 (0.18 -> 0.44): VÒM HANG CAVE.PNG CAMERA PULL-BACK (DOLLY OUT)
       // Khóa chặt trục Y, vòm hang từ ngoài mép màn hình nhẹ nhàng thu lại ôm khung cảnh
       // ---------------------------------------------------------------------
       if (caveRef.current) {
         tl.fromTo(
           caveRef.current,
           { opacity: 0, scale: 1.35, y: 0 },
-          { opacity: 1, scale: 1.0, y: 0, ease: "power1.out", duration: 32 },
-          26
+          { opacity: 1, scale: 1.0, y: 0, ease: "power1.out", duration: 26 },
+          18
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 3 (0.52 -> 0.76): EXPLORER.PNG XUẤT HIỆN SỪNG SỮNG TRÊN MỎM TUYẾT
+      // PHASE 3 (0.35 -> 0.57): EXPLORER.PNG XUẤT HIỆN SỪNG SỮNG TRÊN MỎM TUYẾT
       // ---------------------------------------------------------------------
       if (explorerRef.current) {
         tl.fromTo(
           explorerRef.current,
           { opacity: 0, y: 35, scale: 0.94 },
-          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 24 },
-          52
+          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 22 },
+          35
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 4 (0.70 -> 0.88): CHỮ AVAXAGENT STUDIO BỪNG SÁNG (TITLE DROP CLIMAX)
+      // PHASE 4 (0.48 -> 0.65): CHỮ AVAXAGENT STUDIO BỪNG SÁNG SỚM (TITLE DROP CLIMAX)
       // Xuất hiện kiêu hãnh ngay khoảng trời mở giữa vòm hang và đỉnh núi
       // ---------------------------------------------------------------------
       if (headlineRef.current) {
         tl.fromTo(
           headlineRef.current,
           { opacity: 0, y: 30, scale: 0.92 },
-          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 18 },
-          70
+          { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 17 },
+          48
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 5 (0.88 -> 1.00): NATURAL TRANSITION BUFFER
-      // Đệm nhẹ 12% quãng cuộn để ngắm trọn vẹn bố cục đỉnh cao rồi lướt mượt vào Marketplace
+      // PHASE 5 (0.65 -> 1.00): KHOẢNG NGHỈ DÀNH RIÊNG ĐỂ ĐỌC CHỮ & NGẮM KIỆT TÁC
+      // Toàn bộ tựa đề AVAXAGENT STUDIO và bức tranh giữ nguyên 100% trong suốt 35% quãng cuộn
+      // Giúp người dùng thong thả đọc tên dự án, cảm nhận trọn vẹn visual trước khi vào Marketplace
       // ---------------------------------------------------------------------
     }, containerRef);
 
@@ -141,7 +142,7 @@ export function ParallaxHero() {
   }, []);
 
   return (
-    <section ref={containerRef} className="relative h-[260vh] w-full bg-[#08090E]">
+    <section ref={containerRef} className="relative h-[280vh] w-full bg-[#08090E]">
       {/* Sticky Fullscreen Stage (Firmly pinned at top 0 while scrolling) */}
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         {/* Layer 1: Bg_Sky */}
