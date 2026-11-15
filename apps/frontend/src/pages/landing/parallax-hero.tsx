@@ -233,25 +233,17 @@ export function ParallaxHero() {
           style={{ zIndex: 12, opacity: 0 }}
         />
 
-        {/* Layer 6: Cinematic Headline (Ban đầu ẩn opacity 0, bừng sáng sau cùng - Title Drop Climax) */}
+        {/* Layer 6: Monumental Title Drop (Bừng sáng sau cùng - Tên dự án chủ đề hoành tráng) */}
         <div
           ref={headlineRef}
-          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto opacity-0"
+          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-4 will-change-transform max-w-6xl mx-auto opacity-0"
           style={{ zIndex: 14, opacity: 0 }}
         >
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-2.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#E84142] animate-pulse" />
-            <span className="text-[11px] font-semibold tracking-wider text-slate-200 uppercase font-mono">
-              The Autonomous AI Agent Studio · Avalanche C-Chain
-            </span>
-          </div>
-
-          {/* Elegant Scaled Headline */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white drop-shadow-[0_12px_35px_rgba(0,0,0,0.95)] leading-tight">
+          {/* Monumental Headline */}
+          <h1 className="text-6xl sm:text-8xl md:text-9xl lg:text-[8.5rem] font-black tracking-tighter text-white drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)] leading-[0.88] select-none">
             AVAXAGENT
           </h1>
-          <div className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-[0.3em] uppercase bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent drop-shadow-[0_8px_25px_rgba(0,0,0,0.95)] mt-0.5">
+          <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-[0.38em] uppercase text-[#E84142] drop-shadow-[0_0_30px_rgba(232,65,66,0.55)] mt-2 sm:mt-3 select-none">
             STUDIO
           </div>
         </div>
