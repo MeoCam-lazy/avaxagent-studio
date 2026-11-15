@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -251,19 +252,15 @@ export function ParallaxHero() {
           style={{ zIndex: 12 }}
         />
 
-        {/* Minimalist Glacier Hairline Scroll Indicator (Thanh mảnh, tinh khôi, hòa vào sương tuyết) */}
+        {/* Pure Typographic Scroll Cue with Downward Chevron (Chữ thuần + dấu chevron hướng xuống) */}
         <div
           ref={scrollCueRef}
-          className="pointer-events-none absolute bottom-8 sm:bottom-10 left-0 right-0 z-30 flex flex-col items-center justify-center gap-2 text-center select-none"
+          className="pointer-events-none absolute bottom-8 sm:bottom-10 left-0 right-0 z-30 flex flex-col items-center justify-center gap-1 text-center select-none"
         >
-          <div className="flex flex-col items-center gap-1.5 opacity-85">
-            <span className="font-mono text-[10px] font-bold tracking-[0.28em] uppercase text-slate-700 drop-shadow-sm">
-              CUỘN XUỐNG
-            </span>
-            <div className="relative h-7 w-[2px] overflow-hidden rounded-full bg-slate-400/50">
-              <div className="h-3.5 w-full rounded-full bg-[#E84142] animate-bounce" />
-            </div>
-          </div>
+          <span className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-slate-700 drop-shadow-sm">
+            Cuộn xuống
+          </span>
+          <ChevronDown className="h-4 w-4 text-[#E84142] animate-bounce" strokeWidth={2.5} />
         </div>
 
         {/* Soft Bottom Feather Fade into #F8FAFC Snow White content sections */}
