@@ -1,117 +1,157 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowRight, Bot } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { Button } from "@/components/ui/button";
 
 export function ParallaxHero() {
-  const [progress, setProgress] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const skyRef = useRef<HTMLImageElement>(null);
+  const mountRef = useRef<HTMLImageElement>(null);
+  const cloud03Ref = useRef<HTMLImageElement>(null);
+  const cloud07Ref = useRef<HTMLImageElement>(null);
+  const cloud09Ref = useRef<HTMLImageElement>(null);
+  const cloud05Ref = useRef<HTMLImageElement>(null);
+  const cloud11Ref = useRef<HTMLImageElement>(null);
+  const cloud01Ref = useRef<HTMLImageElement>(null);
+  const cloud02Ref = useRef<HTMLImageElement>(null);
+  const headlineRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let ticking = false;
+    gsap.registerPlugin(ScrollTrigger);
 
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrollY = window.scrollY;
-          // Pinned viewport track across 90% of screen height
-          const maxScroll = window.innerHeight * 0.9;
-          const p = Math.min(1, Math.max(0, scrollY / maxScroll));
-          setProgress(p);
-          ticking = false;
-        });
-        ticking = true;
+    const ctx = gsap.context(() => {
+      // 60 FPS GSAP ScrollTrigger Timeline with 1.0s scrubbed inertia
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1.0,
+        },
+      });
+
+      // 1. Sky: subtle depth zoom
+      if (skyRef.current) {
+        tl.to(skyRef.current, { scale: 1.08, ease: "none" }, 0);
       }
-    };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+      // 2. Mountains: gentle zoom & elevation
+      if (mountRef.current) {
+        tl.to(mountRef.current, { scale: 1.16, y: -28, ease: "none" }, 0);
+      }
+
+      // 3. Clouds Parting Left (clouds03, clouds07)
+      if (cloud03Ref.current) {
+        tl.to(cloud03Ref.current, { x: -320, ease: "power1.out" }, 0);
+      }
+      if (cloud07Ref.current) {
+        tl.to(cloud07Ref.current, { x: -280, ease: "power1.out" }, 0);
+      }
+
+      // 4. Clouds Parting Right (clouds09, clouds05, clouds11)
+      if (cloud09Ref.current) {
+        tl.to(cloud09Ref.current, { x: 260, ease: "power1.out" }, 0);
+      }
+      if (cloud05Ref.current) {
+        tl.to(cloud05Ref.current, { x: 320, ease: "power1.out" }, 0);
+      }
+      if (cloud11Ref.current) {
+        tl.to(cloud11Ref.current, { x: 360, ease: "power1.out" }, 0);
+      }
+
+      // 5. Cloud 01 (Downwards dissolve) & Cloud 02 (Upwards float)
+      if (cloud01Ref.current) {
+        tl.to(cloud01Ref.current, { y: 110, opacity: 0.1, ease: "power1.out" }, 0);
+      }
+      if (cloud02Ref.current) {
+        tl.to(cloud02Ref.current, { y: -80, opacity: 0.2, ease: "power1.out" }, 0);
+      }
+
+      // 6. Headline & Badge: gentle forward scale & fade out
+      if (headlineRef.current) {
+        tl.to(
+          headlineRef.current,
+          { scale: 1.15, y: -50, opacity: 0, ease: "power2.in" },
+          0
+        );
+      }
+
+      // 7. CTA Controls: smooth fade out and disable clicks on scroll
+      if (ctaRef.current) {
+        tl.to(
+          ctaRef.current,
+          {
+            y: -30,
+            opacity: 0,
+            ease: "power2.in",
+            onUpdate: function () {
+              const currentProgress = this.progress();
+              if (ctaRef.current) {
+                ctaRef.current.style.pointerEvents = currentProgress > 0.35 ? "none" : "auto";
+              }
+            },
+          },
+          0
+        );
+      }
+    }, containerRef);
+
+    return () => ctx.revert();
   }, []);
 
-  // Exact Bxcmuse Parallax Physics (from Figma Community "Parallax Scroll Effect (Explore)")
-  // 1. Sky: subtle zoom for depth
-  const skyScale = 1 + progress * 0.08;
-
-  // 2. Mountains: gentle zoom & elevation
-  const mountScale = 1 + progress * 0.16;
-  const mountY = progress * -24;
-
-  // 3. Volumetric Clouds Parting (clouds01 - clouds11)
-  const cloudLeftX = progress * -280;
-  const cloudRightX = progress * 300;
-  const cloudDownY = progress * 100;
-  const cloudUpY = progress * -70;
-
-  // 4. Cinematic Typography & CTA: gentle scale forward and graceful fade
-  const textScale = 1 + progress * 0.12;
-  const textOpacity = Math.max(0, 1 - progress * 2.2);
-  const textY = progress * -35;
-
   return (
-    <section className="relative h-[190vh] w-full bg-[#08090E]">
-      {/* Sticky Fullscreen Stage (Pinned at top 0 while scrolling) */}
+    <section ref={containerRef} className="relative h-[190vh] w-full bg-[#08090E]">
+      {/* Sticky Fullscreen Stage (Firmly pinned at top 0 while scrolling) */}
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         {/* Layer 1: Bg_Sky */}
         <img
+          ref={skyRef}
           src="/assets/bxcmuse/Bg_Sky.png"
           alt="Sky"
           className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top select-none will-change-transform"
-          style={{
-            transform: `scale(${skyScale})`,
-            transformOrigin: "center top",
-            zIndex: 1,
-          }}
+          style={{ zIndex: 1 }}
         />
 
         {/* Layer 2: Mountains (Sunlit alpine peak framed at center-top) */}
         <img
+          ref={mountRef}
           src="/assets/bxcmuse/Mountains.png"
           alt="Mountains"
           className="pointer-events-none absolute inset-0 h-[115%] w-full object-cover object-[center_32%] select-none will-change-transform"
-          style={{
-            transform: `scale(${mountScale}) translateY(${mountY}px)`,
-            transformOrigin: "center center",
-            zIndex: 2,
-          }}
+          style={{ zIndex: 2 }}
         />
 
         {/* Layer 3: Back Clouds (clouds03, clouds07, clouds09) */}
         <img
+          ref={cloud03Ref}
           src="/assets/bxcmuse/clouds03.png"
           alt="Clouds 03"
           className="pointer-events-none absolute top-[6%] -left-[15%] w-[130%] max-w-none opacity-60 select-none will-change-transform"
-          style={{
-            transform: `translateX(${cloudLeftX * 1.1}px)`,
-            zIndex: 3,
-          }}
+          style={{ zIndex: 3 }}
         />
         <img
+          ref={cloud07Ref}
           src="/assets/bxcmuse/clouds07.png"
           alt="Clouds 07"
           className="pointer-events-none absolute top-[14%] -left-[10%] w-[120%] max-w-none opacity-55 select-none will-change-transform"
-          style={{
-            transform: `translateX(${cloudLeftX}px)`,
-            zIndex: 3,
-          }}
+          style={{ zIndex: 3 }}
         />
         <img
+          ref={cloud09Ref}
           src="/assets/bxcmuse/clouds09.png"
           alt="Clouds 09"
           className="pointer-events-none absolute top-[12%] left-[5%] w-[110%] max-w-none opacity-50 select-none will-change-transform"
-          style={{
-            transform: `translateX(${cloudRightX * 0.75}px)`,
-            zIndex: 3,
-          }}
+          style={{ zIndex: 3 }}
         />
 
-        {/* Layer 4: Big Cinematic Headline (Sandwiched between back & front clouds like 'EXPLORE' in Figma) */}
+        {/* Layer 4: Big Cinematic Headline (Sandwiched between clouds like 'EXPLORE' in Figma) */}
         <div
-          className="pointer-events-none absolute top-[16%] sm:top-[18%] left-0 right-0 z-4 flex flex-col items-center justify-center text-center select-none px-4"
-          style={{
-            opacity: textOpacity,
-            transform: `scale(${textScale}) translateY(${textY}px)`,
-            transformOrigin: "center center",
-          }}
+          ref={headlineRef}
+          className="pointer-events-none absolute top-[16%] sm:top-[18%] left-0 right-0 z-4 flex flex-col items-center justify-center text-center select-none px-4 will-change-transform"
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/55 px-4 py-1.5 backdrop-blur-md shadow-2xl mb-3">
@@ -132,52 +172,40 @@ export function ParallaxHero() {
 
         {/* Layer 5: Foreground & Midground Clouds (clouds05, clouds11, clouds01, clouds02) */}
         <img
+          ref={cloud05Ref}
           src="/assets/bxcmuse/clouds05.png"
           alt="Clouds 05"
           className="pointer-events-none absolute top-[28%] left-[20%] w-[95%] max-w-none opacity-70 select-none will-change-transform"
-          style={{
-            transform: `translateX(${cloudRightX}px)`,
-            zIndex: 5,
-          }}
+          style={{ zIndex: 5 }}
         />
         <img
+          ref={cloud11Ref}
           src="/assets/bxcmuse/clouds11.png"
           alt="Clouds 11"
           className="pointer-events-none absolute top-[25%] left-[12%] w-[100%] max-w-none opacity-60 select-none will-change-transform"
-          style={{
-            transform: `translateX(${cloudRightX * 1.2}px)`,
-            zIndex: 5,
-          }}
+          style={{ zIndex: 5 }}
         />
         <img
+          ref={cloud01Ref}
           src="/assets/bxcmuse/clouds01.png"
           alt="Clouds 01"
           className="pointer-events-none absolute bottom-0 left-0 w-full opacity-75 select-none will-change-transform"
-          style={{
-            transform: `translateY(${cloudDownY}px)`,
-            zIndex: 6,
-          }}
+          style={{ zIndex: 6 }}
         />
         <img
+          ref={cloud02Ref}
           src="/assets/bxcmuse/clouds02.png"
           alt="Clouds 02"
           className="pointer-events-none absolute top-[8%] left-[46%] w-[42%] max-w-none opacity-85 select-none will-change-transform"
-          style={{
-            transform: `translateY(${cloudUpY}px)`,
-            zIndex: 6,
-          }}
+          style={{ zIndex: 6 }}
         />
 
-        {/* Layer 6: Action CTA Buttons & Subtitle (Layered above front clouds for 100% legibility) */}
+        {/* Layer 6: Action CTA Buttons & Subtitle (Elevated to z-20 for high-contrast clickability) */}
         <div
-          className="absolute bottom-8 sm:bottom-12 left-0 right-0 z-20 flex flex-col items-center justify-center gap-4 text-center select-none px-4"
-          style={{
-            opacity: textOpacity,
-            pointerEvents: textOpacity > 0.2 ? "auto" : "none",
-            transform: `translateY(${textY * 0.5}px)`,
-          }}
+          ref={ctaRef}
+          className="absolute bottom-8 sm:bottom-12 left-0 right-0 z-20 flex flex-col items-center justify-center gap-4 text-center select-none px-4 will-change-transform"
         >
-          {/* Subtitle with dark backdrop pill for crystal-clear readability against clouds */}
+          {/* Subtitle with dark backdrop pill for crystal-clear readability */}
           <p className="mx-auto max-w-lg rounded-2xl border border-white/10 bg-black/60 px-5 py-2.5 text-xs sm:text-sm leading-relaxed text-slate-100 backdrop-blur-md shadow-2xl font-normal">
             Khởi tạo, vận hành và thương mại hóa AI Agent tự quản.
             Bảo mật ví Turnkey Enclave, mint định danh ERC-8004 và thanh toán micropayment x402.

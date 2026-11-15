@@ -1,21 +1,50 @@
+import { useEffect } from "react";
+import Lenis from "lenis";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
 import { LandingNavbar } from "@/pages/landing/landing-navbar";
 import { LiveAgentsSection } from "@/pages/landing/live-agents-section";
 import { ParallaxHero } from "@/pages/landing/parallax-hero";
 import { TechFeaturesSection } from "@/pages/landing/tech-features-section";
 
 export function LandingPage() {
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Lenis smooth scroll: Apple/Awwwards-level inertial scrolling
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    lenis.on("scroll", ScrollTrigger.update);
+
+    const updateTicker = (time: number) => {
+      lenis.raf(time * 1000);
+    };
+    gsap.ticker.add(updateTicker);
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      gsap.ticker.remove(updateTicker);
+      lenis.destroy();
+    };
+  }, []);
+
   return (
     <div className="relative min-h-screen w-full bg-[#08090E] text-slate-100 selection:bg-[#E84142] selection:text-white overflow-x-clip">
-      {/* Fixed Header */}
+      {/* Morphing Navbar (Full-width to centered glass pill) */}
       <LandingNavbar />
 
-      {/* 1. Scroll-driven Cave Zoom Parallax Hero */}
+      {/* 1. GSAP ScrollTrigger 3D Cloud & Mountain Parallax Stage */}
       <ParallaxHero />
 
-      {/* 2. Live Marketplace Agents Section */}
+      {/* 2. Live Reference Agents Section */}
       <LiveAgentsSection />
 
-      {/* 3. Tech Architecture & UniHack Pillars */}
+      {/* 3. UniHack Tech Architecture Pillars */}
       <TechFeaturesSection />
     </div>
   );

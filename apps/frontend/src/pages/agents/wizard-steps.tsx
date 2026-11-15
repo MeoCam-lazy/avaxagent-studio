@@ -13,7 +13,7 @@ import { ApiError, api } from "@/lib/api";
 import { formatAtomic, parseAtomic } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WIZARD_STEPS, type WizardStep } from "@/lib/agent-setup";
-import type { Agent, RegistrationStatus, SettlementMode } from "@/lib/types";
+import type { Agent, RegistrationStatus, SettlementMode, Wallet } from "@/lib/types";
 
 /** Same rule as backend SLUG_PATTERN (agents/schemas.py). */
 const SLUG_PATTERN = "^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$";
