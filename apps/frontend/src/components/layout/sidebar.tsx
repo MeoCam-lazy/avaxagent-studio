@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Bot, Home, LayoutDashboard, ListChecks, Store, Wallet } from "lucide-react";
+import { Bot, Flame, Home, LayoutDashboard, ListChecks, Store, Wallet } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -14,12 +14,16 @@ const NAV: { to: string; label: string; icon: typeof Home; end?: boolean }[] = [
 
 export function Sidebar() {
   return (
-    <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-60 shrink-0 flex-col border-r md:flex">
-      <Link to="/" className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4 transition-colors hover:bg-sidebar-accent">
-        <div className="bg-primary text-primary-foreground grid size-7 place-items-center rounded-md text-sm font-bold shadow-[0_0_12px_rgba(232,65,66,0.4)]">
-          A
+    <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-64 shrink-0 flex-col border-r md:flex">
+      <Link to="/" className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4 transition-colors hover:bg-sidebar-accent">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#E84142] to-[#A81D20] text-white shadow-[0_0_15px_rgba(232,65,66,0.35)]">
+          <Flame className="h-4 w-4 fill-white text-white" />
         </div>
-        <span className="font-semibold">Avaxagent Studio</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-black tracking-tight text-slate-900">
+            AVAXAGENT <span className="text-[#E84142]">STUDIO</span>
+          </span>
+        </div>
       </Link>
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {NAV.map(({ to, label, icon: Icon, end }) => (
