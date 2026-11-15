@@ -43,6 +43,44 @@ const PILLARS = [
   },
 ];
 
+function MetricItem({ value, label, desc }: { value: string; label: string; desc: string }) {
+  const numberRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const rawNum = parseFloat(value);
+    const suffix = value.replace(/[0-9.]/g, "");
+    if (!isNaN(rawNum) && numberRef.current) {
+      const state = { val: 0 };
+      gsap.to(state, {
+        val: rawNum,
+        duration: 1.4,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: numberRef.current,
+          start: "top 92%",
+          toggleActions: "play none none reverse",
+        },
+        onUpdate: () => {
+          if (numberRef.current) {
+            numberRef.current.textContent =
+              (rawNum % 1 === 0 ? Math.round(state.val) : state.val.toFixed(2)) + suffix;
+          }
+        },
+      });
+    }
+  }, [value]);
+
+  return (
+    <div className="metric-card-reveal rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-xl p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] will-change-transform">
+      <div ref={numberRef} className="text-3xl sm:text-4xl font-black text-[#E84142] font-mono">
+        {value}
+      </div>
+      <div className="text-xs font-bold text-slate-800 mt-1">{label}</div>
+      <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">{desc}</div>
+    </div>
+  );
+}
+
 export function TechFeaturesSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
@@ -96,7 +134,66 @@ export function TechFeaturesSection() {
           ease: "power2.out",
           clearProps: "transform,opacity",
         });
+
+        // Multi-Speed Differential Parallax for 3 Pillars (Center card floats higher)
+        const pillarNodes = gsap.utils.toArray<HTMLElement>(".pillar-card-reveal");
+        if (pillarNodes.length === 3) {
+          gsap.to(pillarNodes[0], {
+            y: -25,
+            ease: "none",
+            scrollTrigger: {
+              trigger: pillarsRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1.0,
+            },
+          });
+          gsap.to(pillarNodes[1], {
+            y: -60,
+            ease: "none",
+            scrollTrigger: {
+              trigger: pillarsRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1.0,
+            },
+          });
+          gsap.to(pillarNodes[2], {
+            y: -30,
+            ease: "none",
+            scrollTrigger: {
+              trigger: pillarsRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1.0,
+            },
+          });
+        }
       }
+
+      // 4. Ambient Floating Shards Scrub in Tech Section
+      gsap.to(".tech-shard-1", {
+        y: -130,
+        rotation: 30,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1.2,
+        },
+      });
+      gsap.to(".tech-shard-2", {
+        y: -170,
+        rotation: -25,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1.3,
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -108,6 +205,18 @@ export function TechFeaturesSection() {
       id="architecture"
       className="relative z-30 pt-16 pb-20 border-t border-slate-200 overflow-hidden bg-slate-50/60"
     >
+      {/* Ambient Floating Glacier Shards */}
+      <div className="pointer-events-none absolute top-1/4 -left-10 tech-shard-1 opacity-25 select-none hidden lg:block">
+        <svg width="130" height="130" viewBox="0 0 100 100" fill="none">
+          <polygon points="50,5 95,40 75,90 20,80 5,35" stroke="#E84142" strokeWidth="1.2" fill="rgba(232,65,66,0.03)" />
+        </svg>
+      </div>
+      <div className="pointer-events-none absolute bottom-1/4 -right-10 tech-shard-2 opacity-25 select-none hidden lg:block">
+        <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
+          <polygon points="50,10 90,50 60,95 15,75 10,25" stroke="#94A3B8" strokeWidth="1.2" fill="rgba(148,163,184,0.04)" />
+        </svg>
+      </div>
+
       {/* Parallax Horizontal Marquee (Oversized typography sliding on scroll) */}
       <div className="w-full overflow-hidden py-4 select-none opacity-25 pointer-events-none mb-8">
         <div
@@ -128,16 +237,7 @@ export function TechFeaturesSection() {
         {/* Protocol Live Metrics */}
         <div id="metrics" className="metrics-container grid grid-cols-2 md:grid-cols-4 gap-4 mb-20">
           {METRICS.map((m, idx) => (
-            <div
-              key={idx}
-              className="metric-card-reveal rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] will-change-transform"
-            >
-              <div className="text-3xl sm:text-4xl font-black text-[#E84142] font-mono">
-                {m.value}
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-1">{m.label}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">{m.desc}</div>
-            </div>
+            <MetricItem key={idx} value={m.value} label={m.label} desc={m.desc} />
           ))}
         </div>
 

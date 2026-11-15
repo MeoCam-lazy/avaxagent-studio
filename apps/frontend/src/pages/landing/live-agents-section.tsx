@@ -56,7 +56,7 @@ export function LiveAgentsSection() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
-      // Staggered reveal for agent cards when scrolling into viewport
+      // 1. Staggered reveal for agent cards when scrolling into viewport
       gsap.from(".agent-card-reveal", {
         scrollTrigger: {
           trigger: gridRef.current,
@@ -70,6 +70,65 @@ export function LiveAgentsSection() {
         ease: "power2.out",
         clearProps: "transform,opacity",
       });
+
+      // 2. Multi-Speed Differential Parallax Floating Cards (Center card rises higher)
+      const cardNodes = gsap.utils.toArray<HTMLElement>(".agent-card-reveal");
+      if (cardNodes.length === 3) {
+        gsap.to(cardNodes[0], {
+          y: -25,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1.0,
+          },
+        });
+        gsap.to(cardNodes[1], {
+          y: -60,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1.0,
+          },
+        });
+        gsap.to(cardNodes[2], {
+          y: -35,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1.0,
+          },
+        });
+      }
+
+      // 3. Ambient Floating Glacier Shards Parallax Scrub
+      gsap.to(".glacier-shard-1", {
+        y: -140,
+        rotation: 20,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1.2,
+        },
+      });
+      gsap.to(".glacier-shard-2", {
+        y: -190,
+        rotation: -25,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1.4,
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -79,8 +138,19 @@ export function LiveAgentsSection() {
     <section
       ref={sectionRef}
       id="marketplace-preview"
-      className="relative z-30 px-4 py-24 sm:px-8 max-w-7xl mx-auto"
+      className="relative z-30 px-4 py-24 sm:px-8 max-w-7xl mx-auto overflow-hidden"
     >
+      {/* Ambient Floating Glacier Shards */}
+      <div className="pointer-events-none absolute -top-8 -left-10 glacier-shard-1 opacity-25 select-none hidden lg:block">
+        <svg width="120" height="120" viewBox="0 0 100 100" fill="none">
+          <polygon points="50,5 90,40 70,90 25,85 10,40" stroke="#E84142" strokeWidth="1.5" fill="rgba(232,65,66,0.04)" />
+        </svg>
+      </div>
+      <div className="pointer-events-none absolute top-1/2 -right-12 glacier-shard-2 opacity-25 select-none hidden lg:block">
+        <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
+          <polygon points="50,10 95,50 65,95 20,80 5,30" stroke="#94A3B8" strokeWidth="1.2" fill="rgba(148,163,184,0.06)" />
+        </svg>
+      </div>
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4 border-b border-slate-200 pb-6">
         <div>
