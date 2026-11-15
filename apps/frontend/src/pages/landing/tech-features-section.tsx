@@ -18,6 +18,7 @@ const PILLARS = [
     icon: Zap,
     title: "Giao thức x402 Micropayment",
     subtitle: "Thanh toán siêu nhỏ không tốn gas",
+    badge: "HTTP 402 + EIP-3009",
     desc: "Tích hợp chuẩn HTTP 402 Payment Required kết hợp EIP-3009 TransferWithAuthorization. Người dùng ký uỷ quyền USDC trực tiếp từ ví, Gateway đóng vai trò Relayer bảo lãnh giao dịch on-chain.",
     bulletPoints: ["Không cần nạp AVAX gas", "Quyết toán trong 2 giây", "Chống replay attack bằng nonce"],
   },
@@ -25,6 +26,7 @@ const PILLARS = [
     icon: Shield,
     title: "Bảo mật Ví Turnkey Enclave",
     subtitle: "Ví phần cứng MPC tự quản cho từng Agent",
+    badge: "Turnkey MPC Sub-Org",
     desc: "Mỗi Agent sở hữu một Sub-Organization riêng biệt trên hạ tầng Turnkey Enclave. Toàn bộ Private Key được lưu trong phần cứng an toàn, gắn kèm Spending Guardrail giới hạn chi tiêu chặt chẽ.",
     bulletPoints: ["Khởi tạo tự động trong 2s", "Chính sách chi tiêu giới hạn", "Không lưu trữ private key thô"],
   },
@@ -32,6 +34,7 @@ const PILLARS = [
     icon: Globe,
     title: "ERC-8004 & ERC-8183 On-Chain",
     subtitle: "Định danh và Bảo chứng hợp đồng",
+    badge: "ERC-8004 + ERC-8183 Escrow",
     desc: "Danh tính của Agent được mint trực tiếp lên Avalanche C-Chain qua chuẩn ERC-8004 IdentityRegistry. Hỗ trợ cơ chế Ký quỹ bảo chứng ERC-8183 giúp giải quyết tranh chấp kết quả tự động.",
     bulletPoints: ["Minh bạch tra cứu trên Snowtrace", "Cơ chế bảo chứng Escrow 95/5", "Đồng bộ realtime qua Indexer"],
   },
@@ -103,10 +106,10 @@ export function TechFeaturesSection() {
       className="relative z-30 pt-16 pb-20 border-t border-slate-200 overflow-hidden bg-slate-50/60"
     >
       {/* Parallax Horizontal Marquee (Oversized typography sliding on scroll) */}
-      <div className="w-full overflow-hidden py-6 select-none opacity-60 pointer-events-none mb-10">
+      <div className="w-full overflow-hidden py-4 select-none opacity-25 pointer-events-none mb-8">
         <div
           ref={marqueeRef}
-          className="flex whitespace-nowrap text-4xl sm:text-6xl font-black font-mono tracking-widest uppercase text-transparent bg-gradient-to-r from-slate-300 via-[#E84142]/40 to-slate-300 bg-clip-text will-change-transform"
+          className="flex whitespace-nowrap text-3xl sm:text-5xl font-black font-mono tracking-widest uppercase text-transparent bg-gradient-to-r from-slate-300 via-[#E84142]/40 to-slate-300 bg-clip-text will-change-transform"
           style={{ width: "250%" }}
         >
           <span>
@@ -156,11 +159,16 @@ export function TechFeaturesSection() {
             return (
               <div
                 key={idx}
-                className="pillar-card-reveal relative rounded-2xl border border-slate-200/90 bg-white p-8 shadow-[0_8px_30px_rgba(15,23,42,0.05)] transition-all duration-300 hover:border-[#E84142]/50 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between will-change-transform"
+                className="pillar-card-reveal relative rounded-2xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-xl shadow-[0_4px_25px_rgba(15,23,42,0.04)] transition-all duration-300 hover:border-[#E84142]/60 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(232,65,66,0.12)] flex flex-col justify-between will-change-transform"
               >
                 <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 border border-red-200/80 text-[#E84142] mb-6">
-                    <Icon className="h-6 w-6" />
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-50 to-slate-100 border border-red-200/80 text-[#E84142] shadow-sm">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className="rounded-md bg-red-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#E84142] border border-red-200/70 font-mono">
+                      {p.badge}
+                    </span>
                   </div>
 
                   <h3 className="text-xl font-bold text-slate-900">{p.title}</h3>

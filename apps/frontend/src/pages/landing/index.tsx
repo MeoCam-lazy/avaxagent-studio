@@ -3,6 +3,7 @@ import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+import { HowItWorksSection } from "@/pages/landing/how-it-works-section";
 import { LandingNavbar } from "@/pages/landing/landing-navbar";
 import { LiveAgentsSection } from "@/pages/landing/live-agents-section";
 import { ParallaxHero } from "@/pages/landing/parallax-hero";
@@ -44,7 +45,10 @@ export function LandingPage() {
       {/* 2. Live Reference Agents Section */}
       <LiveAgentsSection />
 
-      {/* 3. UniHack Tech Architecture Pillars */}
+      {/* 3. How Avaxagent Works (3-Step Lifecycle) */}
+      <HowItWorksSection />
+
+      {/* 4. UniHack Tech Architecture Pillars */}
       <TechFeaturesSection />
     </div>
   );

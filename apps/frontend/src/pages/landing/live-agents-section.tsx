@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Bot, Sparkles } from "lucide-react";
+import { ArrowUpRight, Compass, ShieldCheck, Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -15,6 +15,7 @@ interface FeaturedAgent {
   desc: string;
   tags: string[];
   erc8004Id: string;
+  icon: LucideIcon;
 }
 
 const FEATURED_AGENTS: FeaturedAgent[] = [
@@ -25,6 +26,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     desc: "Phân tích dữ liệu on-chain trên Avalanche C-Chain: thanh khoản Trader Joe, lãi suất Aave v3, dòng tiền USDC/EURC và chỉ số rủi ro DeFi.",
     tags: ["defi-analytics", "avalanche-c-chain", "yield-research"],
     erc8004Id: "#101",
+    icon: TrendingUp,
   },
   {
     slug: "solidity-security-auditor",
@@ -33,6 +35,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     desc: "Kiểm toán bảo mật smart contract Solidity, rà soát lỗ hổng Reentrancy, kiểm tra tương thích chuẩn ERC-8004 và hợp đồng bảo chứng ERC-8183.",
     tags: ["solidity-audit", "erc-8004", "security-check"],
     erc8004Id: "#102",
+    icon: ShieldCheck,
   },
   {
     slug: "avalanche-ecosystem-concierge",
@@ -41,6 +44,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     desc: "Trợ lý hướng dẫn và hỗ trợ tra cứu tài liệu hệ sinh thái Avalanche, tổng hợp tin tức Subnet L1s, giao thức A2A và kết nối nhà phát triển.",
     tags: ["ecosystem-docs", "a2a-protocol", "assistant"],
     erc8004Id: "#103",
+    icon: Compass,
   },
 ];
 
@@ -102,26 +106,28 @@ export function LiveAgentsSection() {
 
       {/* Agents 3-Card Grid with GSAP Staggered Reveal */}
       <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {FEATURED_AGENTS.map((agent) => (
-          <Card
-            key={agent.slug}
-            className="agent-card-reveal group relative flex flex-col justify-between border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-[0_4px_25px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[#E84142]/60 hover:shadow-[0_12px_35px_rgba(232,65,66,0.12)] will-change-transform"
-          >
-            <CardHeader className="space-y-3 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 border border-red-200/80 text-[#E84142]">
-                  <Bot className="h-6 w-6" />
+        {FEATURED_AGENTS.map((agent) => {
+          const Icon = agent.icon;
+          return (
+            <Card
+              key={agent.slug}
+              className="agent-card-reveal group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white/90 backdrop-blur-xl shadow-[0_4px_25px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#E84142]/60 hover:shadow-[0_16px_40px_rgba(232,65,66,0.12)] will-change-transform"
+            >
+              <CardHeader className="space-y-3 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-50 to-slate-100 border border-red-200/80 text-[#E84142] shadow-sm group-hover:scale-105 transition-transform">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-[11px] font-semibold text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
+                      active
+                    </Badge>
+                    <Badge variant="outline" className="border-slate-200 bg-slate-100 text-[11px] text-slate-600 font-mono">
+                      {agent.erc8004Id}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-[11px] font-semibold text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
-                    active
-                  </Badge>
-                  <Badge variant="outline" className="border-slate-200 bg-slate-100 text-[11px] text-slate-600 font-mono">
-                    {agent.erc8004Id}
-                  </Badge>
-                </div>
-              </div>
 
               <div>
                 <CardTitle className="text-lg font-bold text-slate-900 group-hover:text-[#E84142] transition-colors">
@@ -165,7 +171,8 @@ export function LiveAgentsSection() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

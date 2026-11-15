@@ -56,6 +56,12 @@ export function LandingNavbar() {
           Marketplace
         </a>
         <a
+          href="#how-it-works"
+          className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
+        >
+          Quy trình
+        </a>
+        <a
           href="#architecture"
           className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
         >
