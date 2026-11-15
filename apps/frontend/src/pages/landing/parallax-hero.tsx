@@ -35,11 +35,11 @@ export function ParallaxHero() {
       });
 
       // ---------------------------------------------------------------------
-      // PHASE 1 (0.0 -> 0.30): MÂY CHE KÍN -> RẼ MÂY ĐỂ LỘ ĐỈNH NÚI TUYẾT
+      // PHASE 1 (0.0 -> 0.30): MÂY CHE KÍN -> RẼ MÂY ĐỂ LỘ ĐỈNH NÚI TUYẾT & BẦU TRỜI
       // ---------------------------------------------------------------------
       // Bầu trời zoom chiều sâu nhẹ nhàng
       if (skyRef.current) {
-        tl.to(skyRef.current, { scale: 1.12, ease: "none", duration: 100 }, 0);
+        tl.to(skyRef.current, { scale: 1.1, ease: "none", duration: 100 }, 0);
       }
 
       // Lớp sương mây dày đặc che phủ 100% màn hình ban đầu tan biến dần
@@ -54,21 +54,21 @@ export function ParallaxHero() {
 
       // Cụm mây bên trái (clouds03, clouds07) rẽ dạt mạnh sang trái
       if (cloud03Ref.current) {
-        tl.to(cloud03Ref.current, { x: -480, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
+        tl.to(cloud03Ref.current, { x: -500, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
       }
       if (cloud07Ref.current) {
-        tl.to(cloud07Ref.current, { x: -420, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
+        tl.to(cloud07Ref.current, { x: -440, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
       }
 
       // Cụm mây bên phải (clouds09, clouds05, clouds11) rẽ dạt mạnh sang phải
       if (cloud09Ref.current) {
-        tl.to(cloud09Ref.current, { x: 420, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
+        tl.to(cloud09Ref.current, { x: 440, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
       }
       if (cloud05Ref.current) {
-        tl.to(cloud05Ref.current, { x: 480, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
+        tl.to(cloud05Ref.current, { x: 500, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
       }
       if (cloud11Ref.current) {
-        tl.to(cloud11Ref.current, { x: 520, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
+        tl.to(cloud11Ref.current, { x: 540, opacity: 0.1, ease: "power1.out", duration: 32 }, 0);
       }
 
       // Mây dưới và mây trên tản dần
@@ -79,28 +79,28 @@ export function ParallaxHero() {
         tl.to(cloud02Ref.current, { y: -100, opacity: 0.1, ease: "power1.out", duration: 28 }, 0);
       }
 
-      // Đỉnh núi tuyết Mountains.png dần lộ diện từ sau làn mây dày, sắc nét và hùng vĩ
+      // Đỉnh núi tuyết Mountains.png lộ diện: hiển thị trọn vẹn đỉnh núi nhọn và sườn núi đón nắng
       if (mountRef.current) {
         tl.fromTo(
           mountRef.current,
-          { opacity: 0.2, scale: 1.18, y: 30 },
-          { opacity: 1, scale: 1.05, y: -15, ease: "power1.out", duration: 34 },
+          { opacity: 0.2, y: 50 },
+          { opacity: 1, y: 0, ease: "power1.out", duration: 34 },
           0
         );
       }
 
       // ---------------------------------------------------------------------
-      // PHASE 2 (0.24 -> 0.50): HIỆN RA CHỮ AVAXAGENT STUDIO VỪA VẶN
+      // PHASE 2 (0.24 -> 0.50): HIỆN RA CHỮ AVAXAGENT STUDIO TRÊN NỀN TRỜI & ĐỈNH NÚI
       // ---------------------------------------------------------------------
       if (headlineRef.current) {
         tl.fromTo(
           headlineRef.current,
-          { opacity: 0, y: 50, scale: 0.9 },
+          { opacity: 0, y: 40, scale: 0.92 },
           { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 26 },
           24
         );
         // Sau đó giữ ổn định làm tâm điểm sang trọng
-        tl.to(headlineRef.current, { scale: 1.05, ease: "none", duration: 50 }, 50);
+        tl.to(headlineRef.current, { scale: 1.04, ease: "none", duration: 50 }, 50);
       }
 
       // ---------------------------------------------------------------------
@@ -109,7 +109,7 @@ export function ParallaxHero() {
       if (caveRef.current) {
         tl.fromTo(
           caveRef.current,
-          { opacity: 0, yPercent: -45, scale: 1.12 },
+          { opacity: 0, yPercent: -45, scale: 1.08 },
           { opacity: 1, yPercent: 0, scale: 1.0, ease: "power2.out", duration: 28 },
           45
         );
@@ -121,7 +121,7 @@ export function ParallaxHero() {
       if (explorerRef.current) {
         tl.fromTo(
           explorerRef.current,
-          { opacity: 0, y: 140, scale: 0.94 },
+          { opacity: 0, y: 130, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1.0, ease: "power2.out", duration: 25 },
           68
         );
@@ -144,23 +144,23 @@ export function ParallaxHero() {
           style={{ zIndex: 1 }}
         />
 
-        {/* Layer 2: Mountains (Sunlit alpine peaks framed in balanced proportion) */}
+        {/* Layer 2: Mountains (Đỉnh núi tuyết nhọn và sườn núi hiện trọn vẹn, không bị phóng to cắt mất) */}
         <img
           ref={mountRef}
           src="/assets/bxcmuse/Mountains.png"
           alt="Mountains"
-          className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[110vw] max-w-none h-[85vh] sm:h-[95vh] object-cover object-[center_32%] select-none will-change-transform"
+          className="pointer-events-none absolute top-[15%] sm:top-[18%] left-1/2 -translate-x-1/2 w-[110vw] sm:w-[104vw] max-w-none h-auto select-none will-change-transform drop-shadow-[0_15px_30px_rgba(0,0,0,0.7)]"
           style={{ zIndex: 2 }}
         />
 
-        {/* Layer 3: Cinematic Headline (Tỷ lệ hài hòa, nằm trọn vẹn trong khoảng mở) */}
+        {/* Layer 3: Cinematic Headline (Nằm trên khoảng trời quang đãng ngay trên đỉnh núi) */}
         <div
           ref={headlineRef}
-          className="pointer-events-none absolute top-[20%] sm:top-[22%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto"
+          className="pointer-events-none absolute top-[9%] sm:top-[11%] left-0 right-0 flex flex-col items-center justify-center text-center select-none px-6 will-change-transform max-w-4xl mx-auto"
           style={{ zIndex: 3 }}
         >
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1 backdrop-blur-md shadow-xl mb-2.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#E84142] animate-pulse" />
             <span className="text-[11px] font-semibold tracking-wider text-slate-200 uppercase font-mono">
               The Autonomous AI Agent Studio · Avalanche C-Chain
@@ -171,7 +171,7 @@ export function ParallaxHero() {
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white drop-shadow-[0_12px_35px_rgba(0,0,0,0.95)] leading-tight">
             AVAXAGENT
           </h1>
-          <div className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-[0.3em] uppercase bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent drop-shadow-[0_8px_25px_rgba(0,0,0,0.95)] mt-1">
+          <div className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-[0.3em] uppercase bg-gradient-to-r from-white via-slate-100 to-[#FFA4A6] bg-clip-text text-transparent drop-shadow-[0_8px_25px_rgba(0,0,0,0.95)] mt-0.5">
             STUDIO
           </div>
         </div>
@@ -234,7 +234,7 @@ export function ParallaxHero() {
           style={{ zIndex: 7 }}
         />
 
-        {/* Layer 5: Trần hang động Cave.png (Mở rộng góc nhìn, vòm thạch nhũ rủ thanh thoát) */}
+        {/* Layer 5: Trần hang động Cave.png (Vòm thạch nhũ rủ trên đỉnh khung hình) */}
         <img
           ref={caveRef}
           src="/assets/bxcmuse/Cave.png"

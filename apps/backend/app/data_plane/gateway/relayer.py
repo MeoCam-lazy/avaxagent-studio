@@ -165,5 +165,18 @@ class TurnkeyRelayer:
         )
 
 
+class DevMockRelayer:
+    """Mock relayer used in development when Turnkey relayer credentials are not configured."""
+
+    def settle(self, token: str, auth: Authorization, signature: str) -> str:
+        import secrets
+
+        return "0x" + secrets.token_hex(32)
+
+
 def get_relayer() -> Relayer:
+    if settings.environment == "development" and (
+        not settings.relayer_organization_id or not settings.relayer_sign_with
+    ):
+        return DevMockRelayer()
     return TurnkeyRelayer()

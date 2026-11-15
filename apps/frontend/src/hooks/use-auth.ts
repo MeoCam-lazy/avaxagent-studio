@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { avalancheFuji } from "viem/chains";
-import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useSignMessage, useSwitchChain } from "wagmi";
 
 import {
   AUTH_CHANGE_EVENT,
@@ -17,6 +17,7 @@ export interface UseAuthReturn {
   address: string | null;
   token: string | null;
   status: AuthStatus;
+  error: string | null;
   login: () => Promise<void>;
   logout: () => void;
 }
@@ -75,12 +76,15 @@ export function useAuth(): UseAuthReturn {
   const { connectors, connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
+  const switchChainResult = useSwitchChain?.();
+  const switchChainAsync = switchChainResult?.switchChainAsync;
 
   const [token, setToken] = useState<string | null>(() => getStoredToken());
   const [verifiedAddress, setVerifiedAddress] = useState<string | null>(() =>
     decodeSubFromToken(getStoredToken()),
   );
   const [isSigning, setIsSigning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -105,25 +109,61 @@ export function useAuth(): UseAuthReturn {
 
   const login = useCallback(async () => {
     setIsSigning(true);
+    setError(null);
     try {
+      if (typeof window !== "undefined" && (window as unknown as { ethereum?: { request: (args: unknown) => Promise<unknown> } }).ethereum) {
+        const eth = (window as unknown as { ethereum: { request: (args: unknown) => Promise<unknown> } }).ethereum;
+        try {
+          await eth.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0xa869" }],
+          });
+        } catch (switchErr: unknown) {
+          const errCode = (switchErr as { code?: number; data?: { originalError?: { code?: number } } })?.code;
+          if (errCode === 4902 || (switchErr as { data?: { originalError?: { code?: number } } })?.data?.originalError?.code === 4902) {
+            try {
+              await eth.request({
+                method: "wallet_addEthereumChain",
+                params: [
+                  {
+                    chainId: "0xa869",
+                    chainName: "Avalanche Fuji Testnet",
+                    nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 },
+                    rpcUrls: ["https://api.avax-test.network/ext/bc/C/rpc"],
+                    blockExplorerUrls: ["https://subnets.avax.network/c-chain"],
+                  },
+                ],
+              });
+            } catch {
+              // Ignore add network failure
+            }
+          }
+        }
+      }
+
       let walletAddress: string | undefined = account.address;
-      let chainId: number = account.chainId ?? avalancheFuji.id;
 
       if (!walletAddress && connectAsync && connectors.length > 0) {
         try {
           const connected = await connectAsync({ connector: connectors[0] });
           walletAddress = connected.accounts?.[0];
-          if (connected.chainId) {
-            chainId = connected.chainId;
-          }
         } catch {
           // Fallback for headless test environments where no injected provider is present
+        }
+      }
+
+      if (account.chainId && account.chainId !== avalancheFuji.id && switchChainAsync) {
+        try {
+          await switchChainAsync({ chainId: avalancheFuji.id });
+        } catch {
+          // Switch failed or rejected; continue with Fuji chain ID
         }
       }
 
       const signerAddress = walletAddress ?? DEFAULT_FALLBACK_ADDRESS;
       const domain = window.location.host || "localhost:5173";
       const uri = window.location.origin || `http://${domain}`;
+      const chainId = avalancheFuji.id;
 
       const { nonce } = await api.auth.nonce();
       const message = buildSiweMessage({
@@ -140,15 +180,20 @@ export function useAuth(): UseAuthReturn {
       setVerifiedAddress(verified.address || signerAddress);
       setStoredToken(verified.access_token);
       setToken(verified.access_token);
+    } catch (err: unknown) {
+      const e = err as { message?: string; shortMessage?: string };
+      setError(e?.shortMessage ?? e?.message ?? "Đăng nhập thất bại");
+      throw err;
     } finally {
       setIsSigning(false);
     }
-  }, [account.address, account.chainId, connectAsync, connectors, signMessageAsync]);
+  }, [account.address, account.chainId, connectAsync, connectors, signMessageAsync, switchChainAsync]);
 
   const logout = useCallback(() => {
     clearStoredToken();
     setToken(null);
     setVerifiedAddress(null);
+    setError(null);
     try {
       disconnect();
     } catch {
@@ -165,6 +210,7 @@ export function useAuth(): UseAuthReturn {
     address,
     token,
     status,
+    error,
     login,
     logout,
   };

@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { shortAddress } from "@/lib/format";
 
 export function ConnectButton() {
-  const { address, status, login, logout } = useAuth();
+  const { address, status, error, login, logout } = useAuth();
 
   if (status === "authed") {
     return (
@@ -22,15 +22,22 @@ export function ConnectButton() {
   }
 
   return (
-    <Button
-      size="sm"
-      disabled={status === "signing"}
-      onClick={() => {
-        void login();
-      }}
-    >
-      <Wallet className="size-4" />
-      {status === "signing" ? "Đang ký…" : "Kết nối ví"}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        size="sm"
+        disabled={status === "signing"}
+        onClick={() => {
+          void login().catch(() => {});
+        }}
+      >
+        <Wallet className="size-4" />
+        {status === "signing" ? "Đang ký…" : "Kết nối ví"}
+      </Button>
+      {error && (
+        <span className="text-destructive max-w-xs text-right text-xs" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }

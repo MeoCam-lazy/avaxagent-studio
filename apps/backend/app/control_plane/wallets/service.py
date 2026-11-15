@@ -36,8 +36,14 @@ class WalletService:
         reader: ChainReader | None = None,
     ) -> None:
         self.session = session
-        self.admin = admin or get_turnkey_admin()
+        self._admin = admin
         self.reader = reader or get_chain_reader()
+
+    @property
+    def admin(self) -> TurnkeyAdmin:
+        if self._admin is None:
+            self._admin = get_turnkey_admin()
+        return self._admin
 
     async def provision(self, owner_id: str, agent_id: uuid.UUID) -> WalletRead:
         agent = await AgentService(self.session).get_owned(owner_id, agent_id)
