@@ -56,22 +56,16 @@ export function LandingNavbar() {
           Marketplace
         </a>
         <a
-          href="#how-it-works"
-          className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
-        >
-          Quy trình
-        </a>
-        <a
           href="#architecture"
           className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
         >
-          Kiến trúc x402
+          Architecture
         </a>
         <a
-          href="#security"
+          href="#metrics"
           className="text-xs font-semibold text-slate-600 transition-colors hover:text-[#E84142]"
         >
-          Bảo mật Turnkey
+          Metrics
         </a>
         <Badge
           variant="outline"
@@ -101,7 +95,7 @@ export function LandingNavbar() {
               size="sm"
               className="hidden text-xs font-semibold text-slate-600 hover:text-slate-900 sm:inline-flex"
             >
-              Khám phá Agent
+              Explore Agents
             </Button>
           </Link>
         )}

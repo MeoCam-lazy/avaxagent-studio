@@ -23,7 +23,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     slug: "avax-defi-analyst",
     name: "AVAX DeFi Analyst",
     price: "0.25 USDC",
-    desc: "Phân tích dữ liệu on-chain trên Avalanche C-Chain: thanh khoản Trader Joe, lãi suất Aave v3, dòng tiền USDC/EURC và chỉ số rủi ro DeFi.",
+    desc: "Autonomous on-chain data intelligence across Avalanche C-Chain: Trader Joe liquidity, Aave v3 yields, USDC/EURC flow, and DeFi risk metrics.",
     tags: ["defi-analytics", "avalanche-c-chain", "yield-research"],
     erc8004Id: "#101",
     icon: TrendingUp,
@@ -32,7 +32,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     slug: "solidity-security-auditor",
     name: "Solidity Security Auditor",
     price: "0.50 USDC",
-    desc: "Kiểm toán bảo mật smart contract Solidity, rà soát lỗ hổng Reentrancy, kiểm tra tương thích chuẩn ERC-8004 và hợp đồng bảo chứng ERC-8183.",
+    desc: "Automated smart contract security auditing: AST vulnerability analysis, reentrancy detection, ERC-8004 compliance, and ERC-8183 escrow validation.",
     tags: ["solidity-audit", "erc-8004", "security-check"],
     erc8004Id: "#102",
     icon: ShieldCheck,
@@ -41,7 +41,7 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
     slug: "avalanche-ecosystem-concierge",
     name: "Avalanche Ecosystem Concierge",
     price: "0.10 USDC",
-    desc: "Trợ lý hướng dẫn và hỗ trợ tra cứu tài liệu hệ sinh thái Avalanche, tổng hợp tin tức Subnet L1s, giao thức A2A và kết nối nhà phát triển.",
+    desc: "Ecosystem concierge and developer onboarding assistant: Subnet L1 architecture lookup, A2A communication protocols, and dev tools.",
     tags: ["ecosystem-docs", "a2a-protocol", "assistant"],
     erc8004Id: "#103",
     icon: Compass,
@@ -89,16 +89,16 @@ export function LiveAgentsSection() {
             Live Marketplace Agents
           </div>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
-            KHÁM PHÁ CÁC AGENT ĐÃ SẴN SÀNG
+            EXPLORE AUTONOMOUS AGENTS
           </h2>
           <p className="text-sm text-slate-600 mt-1 max-w-xl">
-            Các Agent tự quản đang hoạt động trên Avalanche Fuji. Bạn có thể thuê và thanh toán trực tiếp qua ví MetaMask chỉ với vài click.
+            Autonomous AI agents running live on Avalanche Fuji. Hire and pay with signed USDC authorizations in seconds.
           </p>
         </div>
 
         <Link to="/marketplace">
           <Button variant="outline" className="border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-sm">
-            <span>Xem toàn bộ Marketplace</span>
+            <span>View Full Marketplace</span>
             <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
           </Button>
         </Link>
@@ -155,7 +155,7 @@ export function LiveAgentsSection() {
               {/* Price & Action */}
               <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                 <div>
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">Phí dịch vụ</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">Service Fee</div>
                   <div className="text-base font-black text-[#E84142]">{agent.price}</div>
                 </div>
 
@@ -164,7 +164,7 @@ export function LiveAgentsSection() {
                     size="sm"
                     className="bg-[#E84142] hover:bg-[#D03031] text-xs font-bold text-white shadow-[0_0_15px_rgba(232,65,66,0.3)]"
                   >
-                    <span>Gọi Agent</span>
+                    <span>Hire Agent</span>
                     <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </Link>

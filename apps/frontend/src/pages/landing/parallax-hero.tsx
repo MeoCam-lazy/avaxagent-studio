@@ -265,7 +265,7 @@ export function ParallaxHero() {
           className="pointer-events-none absolute bottom-8 sm:bottom-10 left-0 right-0 z-30 flex flex-col items-center justify-center gap-1 text-center select-none"
         >
           <span className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-slate-700 drop-shadow-sm">
-            Cuộn xuống
+            Scroll down
           </span>
           <ChevronDown className="h-4 w-4 text-[#E84142] animate-bounce" strokeWidth={2.5} />
         </div>
