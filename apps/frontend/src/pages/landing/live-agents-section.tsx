@@ -1,5 +1,8 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Bot, Sparkles } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,8 +45,38 @@ const FEATURED_AGENTS: FeaturedAgent[] = [
 ];
 
 export function LiveAgentsSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const ctx = gsap.context(() => {
+      // Staggered reveal for agent cards when scrolling into viewport
+      gsap.from(".agent-card-reveal", {
+        scrollTrigger: {
+          trigger: gridRef.current,
+          start: "top 85%",
+          toggleActions: "play none none reverse",
+        },
+        y: 45,
+        opacity: 0,
+        duration: 0.85,
+        stagger: 0.16,
+        ease: "power2.out",
+        clearProps: "transform,opacity",
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section id="marketplace-preview" className="relative z-30 px-4 py-24 sm:px-8 max-w-7xl mx-auto">
+    <section
+      ref={sectionRef}
+      id="marketplace-preview"
+      className="relative z-30 px-4 py-24 sm:px-8 max-w-7xl mx-auto"
+    >
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4 border-b border-white/10 pb-6">
         <div>
@@ -67,12 +100,12 @@ export function LiveAgentsSection() {
         </Link>
       </div>
 
-      {/* Agents 3-Card Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Agents 3-Card Grid with GSAP Staggered Reveal */}
+      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {FEATURED_AGENTS.map((agent) => (
           <Card
             key={agent.slug}
-            className="group relative flex flex-col justify-between border-white/10 bg-[#0C0E17]/80 backdrop-blur-xl shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#E84142]/50 hover:shadow-[0_12px_30px_rgba(232,65,66,0.15)]"
+            className="agent-card-reveal group relative flex flex-col justify-between border-white/10 bg-[#0C0E17]/80 backdrop-blur-xl shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#E84142]/50 hover:shadow-[0_12px_30px_rgba(232,65,66,0.15)] will-change-transform"
           >
             <CardHeader className="space-y-3 pb-3">
               <div className="flex items-center justify-between">
