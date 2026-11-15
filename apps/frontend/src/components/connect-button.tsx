@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { shortAddress } from "@/lib/format";
 
-export function ConnectButton() {
+interface ConnectButtonProps {
+  label?: string;
+  signingLabel?: string;
+  logoutLabel?: string;
+}
+
+export function ConnectButton({
+  label = "Kết nối ví",
+  signingLabel = "Đang ký…",
+  logoutLabel = "Đăng xuất",
+}: ConnectButtonProps = {}) {
   const { address, status, error, login, logout } = useAuth();
 
   if (status === "authed") {
@@ -15,7 +25,7 @@ export function ConnectButton() {
           {shortAddress(address)}
         </Badge>
         <Button variant="outline" size="sm" onClick={logout}>
-          Đăng xuất
+          {logoutLabel}
         </Button>
       </div>
     );
@@ -31,7 +41,7 @@ export function ConnectButton() {
         }}
       >
         <Wallet className="size-4" />
-        {status === "signing" ? "Đang ký…" : "Kết nối ví"}
+        {status === "signing" ? signingLabel : label}
       </Button>
       {error && (
         <span className="text-destructive max-w-xs text-right text-xs" role="alert">

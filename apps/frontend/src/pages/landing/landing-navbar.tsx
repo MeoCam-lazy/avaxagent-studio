@@ -100,7 +100,7 @@ export function LandingNavbar() {
           </Link>
         )}
 
-        <ConnectButton />
+        <ConnectButton label="Connect Wallet" signingLabel="Signing…" logoutLabel="Disconnect" />
       </div>
     </header>
   );
