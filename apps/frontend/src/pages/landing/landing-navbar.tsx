@@ -6,11 +6,10 @@ import { useAccount } from "wagmi";
 import { ConnectButton } from "@/components/connect-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { shortAddress } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function LandingNavbar() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

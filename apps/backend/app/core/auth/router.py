@@ -4,8 +4,6 @@ import logging
 import secrets
 from datetime import datetime, timezone
 
-logger = logging.getLogger(__name__)
-
 import redis.asyncio as aioredis
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
@@ -15,6 +13,8 @@ from app.core.auth.siwe import parse_siwe, verify_signature
 from app.core.auth.tokens import create_access_token
 from app.core.config import settings
 from app.core.security import CurrentUser, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["auth"])
 

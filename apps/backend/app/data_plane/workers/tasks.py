@@ -103,9 +103,9 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
                         return (
                             f"## [Báo cáo phân tích AVAX DeFi]\n\n"
                             f"**Yêu cầu của bạn**: {prompt}\n\n"
-                            f"- **Thị trường**: Thanh khoản trên Avalanche C-Chain đang duy trì ổn định.\n"
-                            f"- **Thanh toán**: Giao dịch 0.25 USDC (chuẩn x402 EIP-3009) đã được ghi nhận thành công.\n"
-                            f"- **Lợi suất**: APY Aave v3 USDC đạt ~4.8%, Benqi AVAX đạt ~5.2%."
+                            "- **Thị trường**: Thanh khoản Avalanche C-Chain duy trì ổn định.\n"
+                            "- **Thanh toán**: 0.25 USDC (chuẩn x402 EIP-3009) đã ghi nhận.\n"
+                            "- **Lợi suất**: APY Aave v3 USDC đạt ~4.8%, Benqi AVAX đạt ~5.2%."
                         )
                 llm = _DevMockLlm()
             else:
