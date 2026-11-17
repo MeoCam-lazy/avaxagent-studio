@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Check, ExternalLink, Loader2, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
+import { MarkdownViewer } from "@/components/markdown-viewer";
 import { PageHeader } from "@/components/page-header";
 import { QueryState } from "@/components/query-state";
 import { StatusBadge } from "@/components/status-badge";
@@ -253,9 +254,9 @@ function Deliverable({ job }: { job: Job }) {
               const output = d.content.output;
               return (
                 <>
-                  <pre className="bg-muted max-h-96 overflow-auto rounded-md p-3 text-sm whitespace-pre-wrap">
-                    {typeof output === "string" ? output : JSON.stringify(d.content, null, 2)}
-                  </pre>
+                  <MarkdownViewer
+                    content={typeof output === "string" ? output : JSON.stringify(d.content, null, 2)}
+                  />
                   <dl className="text-muted-foreground space-y-1 text-xs">
                     <div className="flex gap-2">
                       <dt>URI</dt>

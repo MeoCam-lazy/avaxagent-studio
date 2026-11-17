@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timezone
 
@@ -12,6 +13,8 @@ from app.core.auth.siwe import parse_siwe, verify_signature
 from app.core.auth.tokens import create_access_token
 from app.core.config import settings
 from app.core.security import CurrentUser, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["auth"])
 
@@ -49,14 +52,24 @@ async def generate_nonce() -> NonceResponse:
 @router.post("/verify", response_model=TokenResponse)
 async def verify(req: VerifyRequest) -> TokenResponse:
     siwe = parse_siwe(req.message)
+    logger.info(
+        "SIWE verify request: domain=%s (expected=%s), chain_id=%s (expected=%s), address=%s",
+        siwe.domain,
+        settings.auth_domain,
+        siwe.chain_id,
+        chain_id(),
+        siwe.address,
+    )
 
     if siwe.domain.lower() != settings.auth_domain.lower():
+        logger.warning("SIWE invalid domain: %s != %s", siwe.domain, settings.auth_domain)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "invalid_domain"},
         )
 
     if siwe.chain_id != chain_id():
+        logger.warning("SIWE invalid chain_id: %s != %s", siwe.chain_id, chain_id())
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "invalid_chain_id"},

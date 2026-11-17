@@ -10,6 +10,25 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("viem") || id.includes("wagmi") || id.includes("@wagmi") || id.includes("ox")) {
+            return "vendor-web3";
+          }
+          if (id.includes("gsap") || id.includes("lenis")) {
+            return "vendor-motion";
+          }
+          if (id.includes("react") || id.includes("scheduler")) {
+            return "vendor-react";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

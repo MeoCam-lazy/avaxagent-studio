@@ -343,3 +343,79 @@ async def test_income_idempotent(db: AsyncSession):
     )
 
     assert len(entries) == 1
+
+
+@pytest.mark.asyncio
+async def test_income_before_gateway_commit_does_not_double_credit(db: AsyncSession):
+    """If IncomeStream runs before Gateway commits job_id, record_income links it."""
+    from app.chain import network as net
+
+    wallet = Wallet(address="0x" + "91" * 20, chain_id=43113)
+    db.add(wallet)
+    await db.flush()
+
+    agent = Agent(
+        owner_id="owner-race",
+        slug="agent-race",
+        name="Agent Race",
+        status=AgentStatus.ACTIVE,
+        chain_id=43113,
+        wallet_id=wallet.id,
+    )
+    db.add(agent)
+    await db.commit()
+
+    stream = IncomeStream()
+    topics = await stream.topics(db)
+    assert len(topics) == 3
+    assert ("0x" + "00" * 12 + wallet.address[2:].lower()) in topics[2]
+
+    tx_hash = "0x" + "92" * 32
+    log = make_erc20_transfer_log(
+        from_addr="0x" + "93" * 20,
+        to_addr=wallet.address,
+        value=250_000,
+        tx_hash=tx_hash,
+        log_index=3,
+    )
+    # 1. Indexer runs BEFORE job row exists -> books unlinked INCOME + STUDIO_FEE
+    await stream.handle(db, [log])
+    await db.commit()
+
+    # 2. Gateway commits Job and calls record_income(job=job, tx_hash=tx_hash)
+    job = Job(
+        agent_id=agent.id,
+        settlement_mode=agent.settlement_mode,
+        client_address="0x" + "93" * 20,
+        chain_id=43113,
+        status=JobStatus.FUNDED,
+        amount_atomic=250_000,
+        asset=net.payment_asset_address(),
+        payment_tx_hash=tx_hash,
+    )
+    db.add(job)
+    await db.flush()
+    await record_income(
+        db,
+        job=job,
+        amount=250_000,
+        asset=net.payment_asset_address(),
+        tx_hash=tx_hash,
+    )
+    await db.commit()
+
+    entries = (
+        (
+            await db.execute(
+                select(LedgerEntry).where(
+                    LedgerEntry.agent_id == agent.id,
+                    LedgerEntry.tx_hash == tx_hash,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(entries) == 2
+    assert all(e.job_id == job.id for e in entries)
+    assert all(e.log_index == 3 for e in entries)

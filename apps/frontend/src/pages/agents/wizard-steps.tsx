@@ -13,7 +13,7 @@ import { ApiError, api } from "@/lib/api";
 import { formatAtomic, parseAtomic } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WIZARD_STEPS, type WizardStep } from "@/lib/agent-setup";
-import type { Agent, RegistrationStatus, SettlementMode } from "@/lib/types";
+import type { Agent, RegistrationStatus, SettlementMode, Wallet } from "@/lib/types";
 
 /** Same rule as backend SLUG_PATTERN (agents/schemas.py). */
 const SLUG_PATTERN = "^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$";
@@ -266,6 +266,9 @@ export function WalletStep({ agentId, onProvisioned }: { agentId: string; onProv
     mutationFn: () => api.agents.provisionWallet(agentId),
     onSuccess: (wallet) => {
       queryClient.setQueryData(["agents", agentId, "wallet"], wallet);
+      queryClient.setQueryData<Agent>(["agents", agentId], (prev) =>
+        prev ? { ...prev, wallet_address: wallet.address } : prev,
+      );
       queryClient.invalidateQueries({ queryKey: ["agents"] });
       onProvisioned();
     },
@@ -316,7 +319,10 @@ export function RegisterStep({
     queryFn: () => api.agents.wallet(agentId),
     enabled: agent.isSuccess && !agent.data.wallet_address,
   });
-  const address = agent.data?.wallet_address ?? wallet.data?.address;
+  const address =
+    agent.data?.wallet_address ??
+    wallet.data?.address ??
+    queryClient.getQueryData<Wallet>(["agents", agentId, "wallet"])?.address;
   const balances = useQuery({
     queryKey: ["agents", agentId, "wallet", "balances"],
     queryFn: () => api.agents.balances(agentId),

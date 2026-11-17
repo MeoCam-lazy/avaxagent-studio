@@ -8,19 +8,21 @@ import { NewAgentPage } from "@/pages/agents/new";
 import { DashboardPage } from "@/pages/dashboard";
 import { JobDetailPage } from "@/pages/job-detail";
 import { JobsPage } from "@/pages/jobs";
+import { LandingPage } from "@/pages/landing";
 import { MarketplacePage } from "@/pages/marketplace";
 import { MarketplaceAgentPage } from "@/pages/marketplace-agent";
 import { NotFoundPage } from "@/pages/not-found";
 import { WalletPage } from "@/pages/wallet";
 
 export const routes: RouteObject[] = [
+  { path: "/", element: <LandingPage /> },
   {
     element: <AppShell />,
     children: [
       {
         element: <RequireAuth />,
         children: [
-          { index: true, element: <DashboardPage /> },
+          { path: "dashboard", element: <DashboardPage /> },
           { path: "agents", element: <AgentsListPage /> },
           { path: "agents/new", element: <NewAgentPage /> },
           { path: "agents/:id", element: <AgentDetailPage /> },

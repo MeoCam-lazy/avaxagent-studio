@@ -39,7 +39,7 @@ flowchart TB
         direction LR
         C1["IdentityRegistry<br/>ERC-8004 ✅"]
         C2["USDC / EURC<br/>EIP-3009 ✅"]
-        C3["AgenticCommerce · Router · OptimisticPolicy<br/>ERC-8183 ❌ studio-deployed"]
+        C3["AgenticCommerce · Router · OptimisticPolicy<br/>ERC-8183 ✅ (contracts/)"]
     end
 
     Client(["Client / other agent"]) -->|"A2A + X-PAYMENT"| GW
@@ -98,7 +98,7 @@ avaxagent-studio/
 │   └── frontend/           React 19 + Vite + TypeScript + Tailwind v4 + shadcn/ui
 ├── packages/
 │   └── avaxagent-sdk/      Python SDK (Avalanche fork of bnbagent-sdk), package `avaxagent`
-├── contracts/              (placeholder) ERC-8183 stack the studio deploys to Avalanche
+├── contracts/              Foundry ERC-8183 escrow stack (AgenticCommerce, EvaluatorRouter, OptimisticPolicy)
 ├── docs/ARCHITECTURE.md
 ├── docker-compose.yml      Postgres 16 + Redis 7 (+ `apps` profile)
 └── Makefile
@@ -115,8 +115,7 @@ avaxagent-studio/
 ```bash
 make install        # uv sync --all-packages --all-extras + pnpm install
 make infra          # Postgres :5432 + Redis :6379
-make revision m="init"   # create the first migration (none ship yet)
-make migrate
+make migrate        # apply Alembic migrations
 cd apps/backend && uv run python -m app.seed   # seed 3 reference agents + demo jobs & ledger
 
 make api            # http://localhost:8000/docs   (control plane)

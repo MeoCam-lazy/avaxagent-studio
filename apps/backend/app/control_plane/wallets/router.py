@@ -31,10 +31,9 @@ async def get_wallet(
     agent_id: uuid.UUID,
     user: CurrentUser,
     db: DbSession,
-    admin: Annotated[TurnkeyAdmin, Depends(get_turnkey_admin)],
     reader: Annotated[ChainReader, Depends(get_chain_reader)],
 ) -> WalletRead:
-    return await WalletService(db, admin=admin, reader=reader).get(user.id, agent_id)
+    return await WalletService(db, reader=reader).get(user.id, agent_id)
 
 
 @router.put("/policy", response_model=WalletRead)
@@ -56,7 +55,6 @@ async def get_balances(
     agent_id: uuid.UUID,
     user: CurrentUser,
     db: DbSession,
-    admin: Annotated[TurnkeyAdmin, Depends(get_turnkey_admin)],
     reader: Annotated[ChainReader, Depends(get_chain_reader)],
 ) -> WalletBalances:
-    return await WalletService(db, admin=admin, reader=reader).balances(user.id, agent_id)
+    return await WalletService(db, reader=reader).balances(user.id, agent_id)

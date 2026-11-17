@@ -32,6 +32,9 @@ vi.mock("wagmi", async (importOriginal) => {
     useDisconnect: () => ({
       disconnect: vi.fn(),
     }),
+    useSwitchChain: () => ({
+      switchChainAsync: vi.fn(),
+    }),
   };
 });
 

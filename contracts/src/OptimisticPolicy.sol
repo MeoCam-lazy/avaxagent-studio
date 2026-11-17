@@ -6,6 +6,7 @@ import {IACP, IPolicy} from "./IACP.sol";
 /// @title OptimisticPolicy — Dispute-window optimistic settlement policy for ERC-8183
 contract OptimisticPolicy is IPolicy {
     bytes32 public constant REASON_APPROVED = keccak256("OPTIMISTIC_APPROVED");
+    bytes32 public constant REASON_ARBITRATED_APPROVED = keccak256("DISPUTE_QUORUM_APPROVED");
     bytes32 public constant REASON_REJECTED = keccak256("DISPUTE_QUORUM_REJECTED");
 
     error AlreadyDisputed();
@@ -39,6 +40,8 @@ contract OptimisticPolicy is IPolicy {
     event QuorumUpdated(uint16 oldQuorum, uint16 newQuorum);
     event VoteCast(uint256 indexed jobId, address indexed voter, uint16 rejectVotes);
     event QuorumReached(uint256 indexed jobId, uint16 rejectVotes);
+    event ApproveVoteCast(uint256 indexed jobId, address indexed voter, uint16 approveVotes);
+    event ApproveQuorumReached(uint256 indexed jobId, uint16 approveVotes);
 
     IACP public immutable commerce;
     address public immutable router;
@@ -54,6 +57,7 @@ contract OptimisticPolicy is IPolicy {
     mapping(uint256 => bool) public disputed;
     mapping(uint256 => uint16) public disputeQuorumSnapshot;
     mapping(uint256 => uint16) public rejectVotes;
+    mapping(uint256 => uint16) public approveVotes;
     mapping(uint256 => mapping(address => bool)) public hasVoted;
 
     modifier onlyAdmin() {
@@ -123,6 +127,20 @@ contract OptimisticPolicy is IPolicy {
         }
     }
 
+    function voteApprove(uint256 jobId) external {
+        if (!isVoter[msg.sender]) revert NotVoter();
+        if (!disputed[jobId]) revert NotDisputed();
+        if (hasVoted[jobId][msg.sender]) revert AlreadyVoted();
+
+        hasVoted[jobId][msg.sender] = true;
+        uint16 votes = approveVotes[jobId] + 1;
+        approveVotes[jobId] = votes;
+        emit ApproveVoteCast(jobId, msg.sender, votes);
+        if (votes >= disputeQuorumSnapshot[jobId]) {
+            emit ApproveQuorumReached(jobId, votes);
+        }
+    }
+
     function check(uint256 jobId, bytes calldata)
         external
         view
@@ -142,6 +160,9 @@ contract OptimisticPolicy is IPolicy {
         if (rejectVotes[jobId] >= disputeQuorumSnapshot[jobId]) {
             return (2, REASON_REJECTED);
         }
+        if (approveVotes[jobId] >= disputeQuorumSnapshot[jobId]) {
+            return (1, REASON_ARBITRATED_APPROVED);
+        }
         return (0, bytes32(0));
     }
 
@@ -155,7 +176,7 @@ contract OptimisticPolicy is IPolicy {
 
     function removeVoter(address voter) external onlyAdmin {
         if (!isVoter[voter]) revert UnknownVoter();
-        if (activeVoterCount - 1 < voteQuorum && activeVoterCount > 1) revert WouldBreakQuorum();
+        if (activeVoterCount - 1 < voteQuorum) revert WouldBreakQuorum();
         isVoter[voter] = false;
         activeVoterCount -= 1;
         emit VoterRemoved(voter, activeVoterCount);
