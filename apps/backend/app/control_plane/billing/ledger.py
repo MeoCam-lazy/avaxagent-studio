@@ -60,6 +60,27 @@ async def record_income(
                     fee_entry.log_index = log_index
                 await db.flush()
             return
+        # Guard against race where ChainIndexer booked the on-chain Transfer
+        # (job_id=None) moments before Gateway/Settler committed job_id.
+        if tx_hash is not None:
+            unlinked = (
+                await db.execute(
+                    select(LedgerEntry).where(
+                        LedgerEntry.agent_id == aid,
+                        LedgerEntry.chain_id == cid,
+                        LedgerEntry.tx_hash == tx_hash,
+                        LedgerEntry.job_id.is_(None),
+                        LedgerEntry.kind.in_([LedgerKind.INCOME, LedgerKind.STUDIO_FEE]),
+                    )
+                )
+            ).scalars().all()
+            if unlinked:
+                for row in unlinked:
+                    row.job_id = jid
+                    if log_index is not None and row.log_index is None:
+                        row.log_index = log_index
+                await db.flush()
+                return
     elif tx_hash is not None and log_index is not None:
         existing = await db.execute(
             select(LedgerEntry).where(

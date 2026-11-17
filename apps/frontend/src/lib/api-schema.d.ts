@@ -476,6 +476,8 @@ export interface components {
             price_atomic?: number | null;
             /** Is Public */
             is_public?: boolean | null;
+            /** Status */
+            status?: components["schemas"]["AgentStatus"] | null;
         };
         /** EarningsSummary */
         EarningsSummary: {

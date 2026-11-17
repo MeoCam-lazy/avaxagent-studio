@@ -25,6 +25,55 @@ from app.data_plane.workers.llm import get_llm_runner
 from app.db.session import SessionLocal
 
 
+def _dev_fallback_output(agent: Agent, job: Job, prompt: str) -> str:
+    """Role-aware local fallback output when ``LLM_API_KEY`` is unset in development."""
+    usdc_paid = f"{int(job.amount_atomic) / 1_000_000:.2f}".rstrip("0").rstrip(".")
+    mode_label = (
+        "ERC-8183 On-Chain Escrow"
+        if job.settlement_mode == SettlementMode.ERC8183
+        else "x402 EIP-3009 Gasless"
+    )
+    skills = {s.lower() for s in (agent.skills or [])}
+    slug = (agent.slug or "").lower()
+
+    if "solidity" in slug or "solidity-audit" in skills or "reentrancy-check" in skills:
+        return (
+            f"## [Báo cáo Kiểm toán Bảo mật Solidity — {agent.name}]\n\n"
+            f"**Yêu cầu kiểm toán**: {prompt}\n\n"
+            "### Kết quả phân tích tĩnh & luồng trạng thái\n"
+            "- **[PASS] Chống Reentrancy (CEI Pattern)**: Các hàm chuyển token sử dụng "
+            "`nonReentrant` và cập nhật `status` trước khi gọi `transfer`.\n"
+            "- **[PASS] Chống Replay Chữ ký EIP-712 / EIP-3009**: `nonce` 32-byte và "
+            "`chainId` (`43113`) được khóa chặt trong domain separator.\n"
+            "- **[KHUYẾN NGHỊ]**: Kiểm tra biên `validBefore >= block.timestamp + 60` "
+            "để tránh hết hạn chữ ký khi mạng cao tải.\n\n"
+            f"*Quyết toán: `{usdc_paid} USDC` qua {mode_label}.*"
+        )
+
+    if "concierge" in slug or "a2a-protocol" in skills or "avalanche-docs" in skills:
+        return (
+            f"## [Hướng dẫn Tích hợp Hệ sinh thái Avalanche — {agent.name}]\n\n"
+            f"**Câu hỏi**: {prompt}\n\n"
+            "1. **Khám phá Agent Card**: Đọc `/.well-known/agent-card.json` để lấy cấu hình "
+            "`x402` (`payTo`, `amount`, `asset`) và định danh `erc8004`.\n"
+            "2. **Ký ủy quyền không tốn gas AVAX**: Dùng EIP-3009 `TransferWithAuthorization` "
+            "ký bằng ví trình duyệt hoặc `avaxagent-sdk`.\n"
+            "3. **Gửi JSON-RPC `message/send`**: Đính kèm header `X-PAYMENT` để nhận `task.id` "
+            "và theo dõi kết quả qua `tasks/get`.\n\n"
+            f"*Quyết toán: `{usdc_paid} USDC` qua {mode_label}.*"
+        )
+
+    return (
+        f"## [Báo cáo Phân tích On-Chain — {agent.name}]\n\n"
+        f"**Yêu cầu của bạn**: {prompt}\n\n"
+        "- **Thanh khoản Avalanche C-Chain**: Dòng vốn USDC/AVAX trên Trader Joe Liquidity Book "
+        "và Aave v3 duy trì độ sâu ổn định.\n"
+        "- **Lợi suất tham chiếu**: APY USDC ~4.8% (Aave v3), sAVAX ~5.2% (Benqi).\n"
+        "- **Đánh giá rủi ro**: Ưu tiên sử dụng Circle USDC chuẩn EIP-3009 nguyên bản.\n\n"
+        f"*Quyết toán: `{usdc_paid} USDC` qua {mode_label}.*"
+    )
+
+
 def _extract_prompt(request: dict[str, Any]) -> str:
     msg = request.get("message") or request.get("prompt") or ""
     if isinstance(msg, str):
@@ -100,13 +149,8 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
             if settings.environment == "development":
                 class _DevMockLlm:
                     async def complete(self, **kwargs: Any) -> str:
-                        return (
-                            f"## [Báo cáo phân tích AVAX DeFi]\n\n"
-                            f"**Yêu cầu của bạn**: {prompt}\n\n"
-                            "- **Thị trường**: Thanh khoản Avalanche C-Chain duy trì ổn định.\n"
-                            "- **Thanh toán**: 0.25 USDC (chuẩn x402 EIP-3009) đã ghi nhận.\n"
-                            "- **Lợi suất**: APY Aave v3 USDC đạt ~4.8%, Benqi AVAX đạt ~5.2%."
-                        )
+                        return _dev_fallback_output(agent, job, prompt)
+
                 llm = _DevMockLlm()
             else:
                 raise

@@ -144,6 +144,18 @@ class AgentService:
         """Patch config; changing public profile fields should refresh the agent URI."""
         agent = await self.get_owned(owner_id, agent_id)
         updates = data.model_dump(exclude_unset=True)
+        if "status" in updates and updates["status"] is not None:
+            target_status = updates["status"]
+            if target_status not in (AgentStatus.ACTIVE, AgentStatus.PAUSED):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "invalid_status_transition"},
+                )
+            if agent.erc8004_agent_id is None and target_status == AgentStatus.ACTIVE:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"error": "agent_not_registered"},
+                )
         for k, v in updates.items():
             if k == "llm_config" and v is not None:
                 setattr(agent, k, v if isinstance(v, dict) else v.model_dump())

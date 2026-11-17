@@ -84,6 +84,10 @@ JOB_FUNDED_EVENT_ABI = [
     }
 ]
 
+ERC20_TRANSFER_TOPIC = "0x" + Web3.keccak(
+    text="Transfer(address,address,uint256)"
+).hex().removeprefix("0x")
+
 JOB_FUNDED_TOPIC = "0x" + Web3.keccak(
     text="JobFunded(uint256,address,address,uint256)"
 ).hex().removeprefix("0x")
@@ -207,6 +211,17 @@ class IncomeStream(Stream):
     async def address(self, db: AsyncSession) -> list[str]:
         return [net.payment_asset_address()]
 
+    async def topics(self, db: AsyncSession) -> list:
+        addrs = (await db.execute(select(Wallet.address))).scalars().all()
+        recipient_topics = [
+            "0x" + "00" * 12 + a.removeprefix("0x").lower()
+            for a in addrs
+            if a and len(a.removeprefix("0x")) == 40
+        ]
+        if recipient_topics:
+            return [ERC20_TRANSFER_TOPIC, None, recipient_topics]
+        return [ERC20_TRANSFER_TOPIC]
+
     async def handle(self, db: AsyncSession, logs: list[dict[str, Any]]) -> None:
         for log_entry in logs:
             try:
@@ -322,6 +337,16 @@ class EscrowJobStream(Stream):
                 continue
 
             agent, _wallet = row
+            if int(agent.price_atomic) > 0 and amount < int(agent.price_atomic):
+                log.warning(
+                    "Ignoring underfunded ERC-8183 job %d for agent %s: funded %d < price %d",
+                    chain_job_id,
+                    agent.slug,
+                    amount,
+                    int(agent.price_atomic),
+                )
+                continue
+
             raw_tx = log_entry.get("transactionHash")
             tx_hash = raw_tx.hex() if hasattr(raw_tx, "hex") else str(raw_tx)
             if not tx_hash.startswith("0x"):
@@ -329,6 +354,12 @@ class EscrowJobStream(Stream):
 
             request_payload: dict[str, Any] = {"chain_job_id": chain_job_id}
             reader = self.commerce_reader
+            if reader is None and settings.commerce_enabled:
+                try:
+                    reader = commerce.erc8183_client()
+                    self.commerce_reader = reader
+                except Exception:
+                    log.warning("Could not initialize default ERC-8183 reader")
             if reader is not None:
                 try:
                     info = await asyncio.to_thread(reader.get_job, chain_job_id)

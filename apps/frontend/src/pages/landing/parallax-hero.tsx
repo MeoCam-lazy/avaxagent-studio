@@ -1,9 +1,17 @@
 import { useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Languages } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-export function ParallaxHero() {
+import { LANDING_COPY, type LandingLang } from "@/pages/landing/landing-i18n";
+
+export function ParallaxHero({
+  lang,
+  onToggleLang,
+}: {
+  lang: LandingLang;
+  onToggleLang: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const skyRef = useRef<HTMLImageElement>(null);
   const mountRef = useRef<HTMLImageElement>(null);
@@ -259,13 +267,23 @@ export function ParallaxHero() {
           </div>
         </div>
 
-        {/* Pure Typographic Scroll Cue with Downward Chevron (Chữ thuần + dấu chevron hướng xuống) */}
+        {/* Discreet Top-Right Language Pill on Hero Stage */}
+        <button
+          type="button"
+          onClick={onToggleLang}
+          className="absolute top-5 right-5 z-30 inline-flex items-center gap-1.5 rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 text-[11px] font-bold text-slate-700 backdrop-blur-md shadow-sm transition-all hover:bg-white hover:text-[#E84142]"
+        >
+          <Languages className="size-3.5" />
+          <span>{lang === "vi" ? "VI · Tiếng Việt" : "EN · English"}</span>
+        </button>
+
+        {/* Pure Typographic Scroll Cue with Downward Chevron */}
         <div
           ref={scrollCueRef}
           className="pointer-events-none absolute bottom-8 sm:bottom-10 left-0 right-0 z-30 flex flex-col items-center justify-center gap-1 text-center select-none"
         >
           <span className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-slate-700 drop-shadow-sm">
-            Scroll down
+            {LANDING_COPY[lang].scrollCue}
           </span>
           <ChevronDown className="h-4 w-4 text-[#E84142] animate-bounce" strokeWidth={2.5} />
         </div>

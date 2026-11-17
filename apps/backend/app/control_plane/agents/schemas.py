@@ -37,6 +37,7 @@ class AgentUpdate(BaseModel):
     settlement_mode: SettlementMode | None = None
     price_atomic: int | None = Field(default=None, ge=0)
     is_public: bool | None = None
+    status: AgentStatus | None = None
 
 
 class AgentRead(BaseModel):

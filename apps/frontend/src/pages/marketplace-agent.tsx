@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { erc20Abi } from "viem";
 import { useReadContract } from "wagmi";
 
+import { MarkdownViewer } from "@/components/markdown-viewer";
 import { PageHeader } from "@/components/page-header";
 import { QueryState } from "@/components/query-state";
 import { Badge } from "@/components/ui/badge";
@@ -274,9 +275,7 @@ function TaskResult({
       {state === "failed" && task.data?.error && <p className="text-destructive">{task.data.error}</p>}
       {state === "completed" &&
         (task.data?.text ? (
-          <pre className="bg-muted max-h-96 overflow-auto rounded-md p-3 whitespace-pre-wrap">
-            {task.data.text}
-          </pre>
+          <MarkdownViewer content={task.data.text} />
         ) : (
           <p className="text-muted-foreground break-all">
             Gateway không đọc được nội dung. Deliverable: {task.data?.uri ?? "—"}

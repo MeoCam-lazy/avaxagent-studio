@@ -208,6 +208,7 @@ async def test_jobfunded_creates_job_once(db: AsyncSession, monkeypatch: pytest.
         status=AgentStatus.ACTIVE,
         wallet_id=wallet.id,
         settlement_mode=SettlementMode.ERC8183,
+        price_atomic=250_000,
     )
     await db.commit()
 
@@ -221,6 +222,12 @@ async def test_jobfunded_creates_job_once(db: AsyncSession, monkeypatch: pytest.
         provider=wallet.address,
         amount=250_000,
     )
+    underfunded_log = _build_job_funded_log(
+        job_id=44,
+        client=CLIENT_ADDR,
+        provider=wallet.address,
+        amount=100,
+    )
     stranger_log = _build_job_funded_log(
         job_id=43,
         client=CLIENT_ADDR,
@@ -228,7 +235,7 @@ async def test_jobfunded_creates_job_once(db: AsyncSession, monkeypatch: pytest.
         amount=250_000,
     )
 
-    await stream.handle(db, [managed_log, stranger_log])
+    await stream.handle(db, [managed_log, underfunded_log, stranger_log])
     await db.commit()
 
     # Re-delivering the exact same log must be idempotent on (chain_id, chain_job_id)

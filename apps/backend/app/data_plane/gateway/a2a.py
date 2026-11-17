@@ -277,7 +277,11 @@ async def handle_a2a(
     await add_event(db, job, "funded", tx_hash=tx_hash)
     await db.commit()
 
-    await queue.enqueue_job(RUN_JOB, str(job.id))
+    try:
+        await queue.enqueue_job(RUN_JOB, str(job.id))
+    except Exception:
+        # On-chain USDC already settled; SettleBot will re-enqueue stuck FUNDED jobs.
+        logger.exception("Redis enqueue failed for settled job %s; awaiting recovery", job.id)
 
     # Step 5: Return JSON-RPC response, with the x402 settlement receipt.
     receipt = {

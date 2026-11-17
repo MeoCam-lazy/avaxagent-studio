@@ -68,6 +68,27 @@ class EscrowSettler:
 
     async def _settle_one(self, job_id: uuid.UUID, client: Any) -> bool:
         async with self.session_factory() as db:
+            job_read = (
+                await db.execute(
+                    select(Job).where(
+                        Job.id == job_id,
+                        Job.settlement_mode == SettlementMode.ERC8183,
+                        Job.status == JobStatus.SUBMITTED,
+                    )
+                )
+            ).scalar_one_or_none()
+            if job_read is None or job_read.chain_job_id is None:
+                return False
+            chain_job_id = int(job_read.chain_job_id)
+
+        # Keep RPC reads and Turnkey signing outside any DB row lock.
+        verdict, _reason = await asyncio.to_thread(client.policy_verdict, chain_job_id)
+        if verdict == int(PolicyVerdict.PENDING):
+            return False
+
+        tx_hash = await asyncio.to_thread(client.settle, chain_job_id)
+
+        async with self.session_factory() as db:
             stmt = (
                 select(Job)
                 .where(
@@ -78,15 +99,9 @@ class EscrowSettler:
                 .with_for_update(skip_locked=True)
             )
             job = (await db.execute(stmt)).scalar_one_or_none()
-            if job is None or job.chain_job_id is None:
+            if job is None:
                 return False
 
-            chain_job_id = int(job.chain_job_id)
-            verdict, _reason = await asyncio.to_thread(client.policy_verdict, chain_job_id)
-            if verdict == int(PolicyVerdict.PENDING):
-                return False
-
-            tx_hash = await asyncio.to_thread(client.settle, chain_job_id)
             job.settle_tx_hash = tx_hash
 
             if verdict == int(PolicyVerdict.APPROVED):
