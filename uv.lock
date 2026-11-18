@@ -461,9 +461,10 @@ dependencies = [
     { name = "anthropic" },
     { name = "arq" },
     { name = "asyncpg" },
-    { name = "avaxagent" },
+    { name = "avaxagent", extra = ["turnkey"] },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings", version = "2.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pydantic-settings", version = "2.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -487,9 +488,10 @@ requires-dist = [
     { name = "anthropic", specifier = ">=0.40" },
     { name = "arq", specifier = ">=0.26" },
     { name = "asyncpg", specifier = ">=0.29" },
-    { name = "avaxagent", editable = "packages/avaxagent-sdk" },
+    { name = "avaxagent", extras = ["turnkey"], editable = "packages/avaxagent-sdk" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "openai", specifier = ">=1.66.0" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pydantic-settings", specifier = ">=2.3" },
     { name = "pyjwt", specifier = ">=2.9" },
@@ -2751,6 +2753,25 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/00/2f/45eb8700ee15716cc22f5b42592b4d5bc1ca65c880179c2c10e42fd6f0b4/multidict-7.2.1-cp315-cp315t-win_amd64.whl", hash = "sha256:25ebc4208d9098f77caeb16df895a0e56eb6c3b22870ac4e3ec43e0a9d6a33b6", size = 101193, upload-time = "2026-10-24T20:41:34.124Z" },
     { url = "https://files.pythonhosted.org/packages/7b/80/37d26f26d20b937344cfd68d9a1f57d8bc4f64adae416fc6828a7f8c8a10/multidict-7.2.1-cp315-cp315t-win_arm64.whl", hash = "sha256:4d61be3725016ef5db3543c95f1f062d7d150ba776582d959a982af88e75fa55", size = 98863, upload-time = "2026-10-24T20:40:59.146Z" },
     { url = "https://files.pythonhosted.org/packages/9d/96/1aaad0e5df33f1f5af21775c411349c0234a6edd581ea403bc81919a6eab/multidict-7.2.1-py3-none-any.whl", hash = "sha256:08ea94663d9e7c25d14d78222f7aee906c472d4837766bec62477c38f6e419dc", size = 28145, upload-time = "2026-10-24T20:40:59.159Z" },
+]
+
+[[package]]
+name = "openai"
+version = "3.55.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx2", version = "2.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "httpx2", version = "2.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "jiter", version = "0.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "jiter", version = "0.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/9d/bbc069c02b07420e590e240673e40efbf423e6d7eb6c52493b7ab78f5d7d/openai-3.55.1.tar.gz", hash = "sha256:db5a9ae65d21e5a51ef7fa395e5418942b04120cc73f2ab25bd2fc22db101ecd", size = 2424302, upload-time = "2026-11-18T16:05:20.446Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/c3/e7572f192d705c89c3dd475693640c529df289a98c94306bd724b73ed6ca/openai-3.55.1-py3-none-any.whl", hash = "sha256:9136b1a760401aa150d084b0a673a4eca5b434917f3afe0378321cf544d5bdc2", size = 2451088, upload-time = "2026-11-18T16:05:17.896Z" },
 ]
 
 [[package]]

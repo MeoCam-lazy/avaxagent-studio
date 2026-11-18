@@ -18,10 +18,10 @@ import type { Agent, RegistrationStatus, SettlementMode, Wallet } from "@/lib/ty
 /** Same rule as backend SLUG_PATTERN (agents/schemas.py). */
 const SLUG_PATTERN = "^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$";
 
-/** Defaults of the backend `LLMConfig` (agents/schemas.py). */
+/** Initial selection before the backend provider catalog loads. */
 const DEFAULT_PROVIDER = "anthropic";
-const DEFAULT_MODEL = "claude-sonnet-5-5";
 const DEFAULT_TEMPERATURE = "0.2";
+const EMPTY_PROVIDERS: string[] = [];
 
 export function Stepper({ step }: { step: WizardStep }) {
   const current = step === "done" ? WIZARD_STEPS.length : WIZARD_STEPS.findIndex((s) => s.key === step);
@@ -83,6 +83,8 @@ function Field({
 const ERROR_MESSAGES: Record<string, string> = {
   wallet_required: "Agent chưa có ví. Quay lại bước tạo ví.",
   agent_not_found: "Không tìm thấy agent.",
+  turnkey_permission_denied: "API key Turnkey chưa được policy cho phép tạo ví agent. Hãy kiểm tra quyền tạo sub-organization.",
+  turnkey_operation_failed: "Turnkey từ chối thao tác tạo ví. Hãy kiểm tra cấu hình và policy Turnkey.",
 };
 
 function describeError(error: unknown): string {
@@ -109,7 +111,39 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
   const queryClient = useQueryClient();
   const { data: net } = useNetwork();
   const [mode, setMode] = useState<SettlementMode>("x402");
+  const [provider, setProvider] = useState(DEFAULT_PROVIDER);
+  const [providerTouched, setProviderTouched] = useState(false);
+  const [model, setModel] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ slug?: string; price?: string }>({});
+  const llmProviders = useQuery({
+    queryKey: ["llm-providers"],
+    queryFn: api.agents.llmProviders,
+  });
+  const providers = llmProviders.data?.providers ?? EMPTY_PROVIDERS;
+  const llmModels = useQuery({
+    queryKey: ["llm-models", provider],
+    queryFn: () => api.agents.llmModels(provider),
+    enabled: providers.includes(provider),
+  });
+
+  useEffect(() => {
+    if (!llmProviders.data) return;
+    const preferred = llmProviders.data.default_provider;
+    const nextProvider = providerTouched && providers.includes(provider)
+      ? provider
+      : providers.includes(preferred) ? preferred : providers[0] ?? preferred;
+    if (nextProvider !== provider) {
+      setProvider(nextProvider);
+      setModel("");
+    }
+  }, [llmProviders.data, provider, providerTouched, providers]);
+
+  useEffect(() => {
+    const available = llmModels.data ?? [];
+    if (!available.length || available.includes(model)) return;
+    const preferred = llmProviders.data?.default_model;
+    setModel(preferred && available.includes(preferred) ? preferred : available[0]);
+  }, [llmModels.data, llmProviders.data?.default_model, model]);
 
   const create = useMutation({
     mutationFn: api.agents.create,
@@ -126,6 +160,7 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!providers.includes(provider) || !llmModels.data?.includes(model)) return;
     const f = new FormData(e.currentTarget);
     let priceAtomic: bigint;
     try {
@@ -148,8 +183,8 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
         .map((s) => s.trim())
         .filter(Boolean),
       llm_config: {
-        provider: DEFAULT_PROVIDER,
-        model: String(f.get("model") || DEFAULT_MODEL),
+        provider,
+        model,
         system_prompt: String(f.get("system_prompt") ?? ""),
         temperature: Number(f.get("temperature") || DEFAULT_TEMPERATURE),
       },
@@ -160,6 +195,8 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
   }
 
   const slugTaken = create.error instanceof ApiError && create.error.code === "slug_taken";
+  const modelLoading = providers.includes(provider) && llmModels.isPending;
+  const readyToCreate = providers.includes(provider) && !!model && !!llmModels.data?.includes(model);
 
   return (
     <Card className="max-w-2xl">
@@ -196,8 +233,64 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
             <Textarea id="system_prompt" name="system_prompt" rows={4} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Provider" htmlFor="provider">
+              <select
+                id="provider"
+                name="provider"
+                value={providers.includes(provider) ? provider : ""}
+                onChange={(event) => {
+                  setProviderTouched(true);
+                  setProvider(event.target.value);
+                  setModel("");
+                }}
+                className={selectClass}
+                disabled={!providers.length}
+              >
+                {!providers.length && (
+                  <option value="">
+                    {llmProviders.isPending ? "Đang tải provider…" : "Chưa có provider khả dụng"}
+                  </option>
+                )}
+                {providers.map((item) => (
+                  <option key={item} value={item}>
+                    {item === "openai" ? "OpenAI" : "Anthropic"}
+                  </option>
+                ))}
+              </select>
+              {llmProviders.isError && (
+                <div className="text-destructive text-xs">
+                  Không tải được provider. Kiểm tra kết nối API rồi{" "}
+                  <button type="button" className="underline" onClick={() => llmProviders.refetch()}>
+                    thử lại
+                  </button>.
+                </div>
+              )}
+              {llmProviders.isSuccess && !providers.length && (
+                <p className="text-destructive text-xs">Backend chưa cấu hình API key cho provider nào.</p>
+              )}
+            </Field>
             <Field label="Model" htmlFor="model">
-              <Input id="model" name="model" defaultValue={DEFAULT_MODEL} />
+              <select
+                id="model"
+                name="model"
+                value={llmModels.data?.includes(model) ? model : ""}
+                onChange={(event) => setModel(event.target.value)}
+                className={selectClass}
+                disabled={!llmModels.data?.length}
+              >
+                <option value="" disabled>
+                  {modelLoading ? "Đang tải model…" : "Chưa có model khả dụng"}
+                </option>
+                {llmModels.data?.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              {llmModels.isError && (
+                <div className="text-destructive text-xs">
+                  Không tải được danh sách model. Kiểm tra kết nối API rồi{" "}
+                  <button type="button" className="underline" onClick={() => llmModels.refetch()}>
+                    thử lại
+                  </button>.
+                </div>
+              )}
             </Field>
             <Field label="Temperature" htmlFor="temperature">
               <Input
@@ -250,7 +343,7 @@ export function ConfigStep({ onCreated }: { onCreated: (agent: Agent) => void })
 
           {!slugTaken && <ErrorText error={create.error} feature="POST /agents" />}
 
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" disabled={create.isPending || !readyToCreate}>
             {create.isPending && <Loader2 className="animate-spin" />}
             {create.isPending ? "Đang tạo…" : "Tạo agent"}
           </Button>

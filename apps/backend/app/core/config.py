@@ -94,6 +94,20 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-5-5"
     llm_api_key: str | None = None
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+
+    def llm_key_for_provider(self, provider: str) -> str | None:
+        """Return the provider-specific key, falling back to the configured generic key."""
+        if provider == "openai":
+            return self.openai_api_key or (
+                self.llm_api_key if self.llm_provider == provider else None
+            )
+        if provider == "anthropic":
+            return self.anthropic_api_key or (
+                self.llm_api_key if self.llm_provider == provider else None
+            )
+        return None
 
     @model_validator(mode="after")
     def _validate_prod_jwt_secret(self) -> Settings:

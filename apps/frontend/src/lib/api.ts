@@ -132,6 +132,12 @@ export const api = {
   },
 
   agents: {
+    llmProviders: () =>
+      request<{ default_provider: string; default_model: string; providers: string[] }>(
+        "/agents/llm/providers",
+      ),
+    llmModels: (provider: string) =>
+      request<string[]>(`/agents/llm/models?provider=${encodeURIComponent(provider)}`),
     list: () => request<Agent[]>("/agents"),
     get: (id: string) => request<Agent>(`/agents/${id}`),
     create: (body: AgentCreate) => request<Agent>("/agents", post(body)),

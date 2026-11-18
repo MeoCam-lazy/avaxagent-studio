@@ -156,7 +156,7 @@ You can also run the whole stack in Docker behind Caddy: `docker compose --profi
 | `RELAYER_SIGN_WITH`, `RELAYER_ORGANIZATION_ID` | empty | Studio relayer wallet for x402 settlement |
 | `STORAGE_BACKEND` | `local` | `local`, `ipfs` or `s3` |
 | `STORAGE_LOCAL_PATH` / `STORAGE_API_KEY` / `S3_BUCKET` | `.agent-data` / empty / empty | |
-| `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` | `anthropic` / `claude-sonnet-5-5` / empty | Job workers |
+| `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` | `anthropic` / `claude-sonnet-5-5` / empty | Job workers (`openai` and `anthropic` supported) |
 
 The frontend reads `VITE_API_URL` (default `/api/v1`, served through the Vite dev proxy).
 

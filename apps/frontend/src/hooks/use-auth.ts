@@ -10,6 +10,7 @@ import {
   getStoredToken,
   setStoredToken,
 } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 
 export type AuthStatus = "anon" | "signing" | "authed";
 
@@ -182,7 +183,11 @@ export function useAuth(): UseAuthReturn {
       setToken(verified.access_token);
     } catch (err: unknown) {
       const e = err as { message?: string; shortMessage?: string };
-      setError(e?.shortMessage ?? e?.message ?? "Đăng nhập thất bại");
+      if (err instanceof ApiError && err.status === 503 && err.code === "auth_store_unavailable") {
+        setError("Dịch vụ đăng nhập đang tạm thời không khả dụng. Hãy kiểm tra Redis của backend rồi thử lại.");
+      } else {
+        setError(e?.shortMessage ?? e?.message ?? "Đăng nhập thất bại");
+      }
       throw err;
     } finally {
       setIsSigning(false);

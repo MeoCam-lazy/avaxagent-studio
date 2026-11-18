@@ -13,6 +13,7 @@ from typing import Any, Protocol
 
 import httpx
 from avaxagent.wallets.turnkey.stamper import ApiKeyStamper
+from eth_utils import to_checksum_address
 
 from app.control_plane.wallets.schemas import WalletPolicy
 from app.core.config import settings
@@ -132,7 +133,7 @@ class HttpTurnkeyAdmin:
     async def create_agent_sub_org(self, name: str) -> SubOrg:
         timestamp_ms = str(int(time.time() * 1000))
         payload = {
-            "type": "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+            "type": "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
             "organizationId": self.organization_id,
             "parameters": {
                 "subOrganizationName": name,
@@ -143,6 +144,7 @@ class HttpTurnkeyAdmin:
                             {
                                 "apiKeyName": "Studio API Key",
                                 "publicKey": self.api_public_key,
+                                "curveType": "API_KEY_CURVE_P256",
                             }
                         ],
                         "authenticators": [],
@@ -169,7 +171,7 @@ class HttpTurnkeyAdmin:
             "/public/v1/submit/create_sub_organization",
             payload,
         )
-        inner = result.get("createSubOrganizationResultV7") or result
+        inner = result.get("createSubOrganizationResultV8") or result
         sub_org_id = inner.get("subOrganizationId", "")
         wallet = inner.get("wallet", {})
         wallet_id = wallet.get("walletId", "")
@@ -186,31 +188,47 @@ class HttpTurnkeyAdmin:
         chain_id: int,
         allowed_eip712_contracts: list[str],
     ) -> str:
-        timestamp_ms = str(int(time.time() * 1000))
-        all_contracts = set(c.lower() for c in policy.allowed_contracts)
-        for c in allowed_eip712_contracts:
-            all_contracts.add(c.lower())
+        contracts = sorted(
+            {to_checksum_address(c) for c in [*policy.allowed_contracts, *allowed_eip712_contracts]}
+        )
+        if not contracts:
+            return ""
 
-        contracts_str = ", ".join(f"'{c}'" for c in sorted(all_contracts))
-        condition = (
-            f"eth.tx.to in [{contracts_str}] || eip712.verifyingContract in [{contracts_str}]"
+        contracts_str = ", ".join(f"'{c}'" for c in contracts)
+        policy_conditions = (
+            (
+                "Agent Transaction Allowlist",
+                f"activity.type == 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2' && "
+                f"eth.tx.chain_id == {chain_id} && eth.tx.to in [{contracts_str}]",
+            ),
+            (
+                "Agent EIP-712 Allowlist",
+                f"activity.type == 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2' && "
+                "activity.params.encoding == 'PAYLOAD_ENCODING_EIP712' && "
+                f"eth.eip_712.domain.chain_id == {chain_id} && "
+                f"eth.eip_712.domain.verifying_contract in [{contracts_str}]",
+            ),
         )
 
-        payload = {
-            "type": "ACTIVITY_TYPE_CREATE_POLICY_V3",
-            "organizationId": sub_org_id,
-            "parameters": {
-                "policyName": "Agent Spending Guardrail",
-                "condition": condition,
-                "consensus": "true",
-                "effect": "EFFECT_ALLOW",
-            },
-            "timestampMs": timestamp_ms,
-        }
+        policy_id = ""
+        for name, condition in policy_conditions:
+            payload = {
+                "type": "ACTIVITY_TYPE_CREATE_POLICY_V3",
+                "organizationId": sub_org_id,
+                "parameters": {
+                    "policyName": name,
+                    "notes": "",
+                    "condition": condition,
+                    "consensus": "true",
+                    "effect": "EFFECT_ALLOW",
+                },
+                "timestampMs": str(int(time.time() * 1000)),
+            }
 
-        result = await self._submit_and_wait("/public/v1/submit/create_policy", payload)
-        inner = result.get("createPolicyResultV3") or result
-        return inner.get("policyId", "")
+            result = await self._submit_and_wait("/public/v1/submit/create_policy", payload)
+            inner = result.get("createPolicyResultV3") or result
+            policy_id = inner.get("policyId", "")
+        return policy_id
 
 
 def get_turnkey_admin() -> TurnkeyAdmin:

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import redis.asyncio as aioredis
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 
 from app.chain.network import chain_id
 from app.core.auth.siwe import parse_siwe, verify_signature
@@ -38,12 +39,22 @@ def get_redis() -> aioredis.Redis:
     return aioredis.from_url(settings.redis_url, decode_responses=True)
 
 
+def _auth_store_unavailable(exc: RedisError) -> HTTPException:
+    logger.exception("SIWE nonce store is unavailable")
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={"error": "auth_store_unavailable"},
+    )
+
+
 @router.post("/nonce", response_model=NonceResponse)
 async def generate_nonce() -> NonceResponse:
     nonce = secrets.token_hex(16)
     r = get_redis()
     try:
         await r.set(f"siwe:nonce:{nonce}", "1", ex=300)
+    except RedisError as exc:
+        raise _auth_store_unavailable(exc) from exc
     finally:
         await r.aclose()
     return NonceResponse(nonce=nonce)
@@ -84,6 +95,8 @@ async def verify(req: VerifyRequest) -> TokenResponse:
     r = get_redis()
     try:
         consumed = await r.getdel(f"siwe:nonce:{siwe.nonce}")
+    except RedisError as exc:
+        raise _auth_store_unavailable(exc) from exc
     finally:
         await r.aclose()
 

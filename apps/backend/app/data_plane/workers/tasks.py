@@ -139,12 +139,13 @@ async def _run_job_with_session(db: AsyncSession, job_id: str) -> None:
     try:
         prompt = _extract_prompt(job.request)
         llm_cfg = agent.llm_config or {}
+        provider = llm_cfg.get("provider", settings.llm_provider)
         model = llm_cfg.get("model", settings.llm_model)
         system = llm_cfg.get("system_prompt") or llm_cfg.get("system", "")
         temperature = float(llm_cfg.get("temperature", 0.7))
 
         try:
-            llm = get_llm_runner()
+            llm = get_llm_runner(provider=provider)
         except Exception:
             if settings.environment == "development":
                 class _DevMockLlm:

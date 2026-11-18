@@ -42,7 +42,7 @@ cp apps/frontend/.env.example apps/frontend/.env
 | | `TURNKEY_API_PRIVATE_KEY` | Turnkey API private key | Turnkey API private key |
 | **Relayer** | `RELAYER_SIGN_WITH` | Relayer address/key ID (funded with AVAX) | Mainnet relayer address/key ID |
 | | `RELAYER_ORGANIZATION_ID` | Turnkey org ID holding the relayer wallet | Turnkey org ID holding the relayer wallet |
-| **Worker** | `LLM_API_KEY` | Anthropic API key (`sk-ant-...`) | Anthropic API key (`sk-ant-...`) |
+| **Worker** | `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` | Provider (`openai` or `anthropic`), model ID, and matching API key | Provider (`openai` or `anthropic`), model ID, and matching API key |
 
 ---
 

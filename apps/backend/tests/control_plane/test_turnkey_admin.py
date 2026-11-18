@@ -161,13 +161,18 @@ async def test_policy_condition_includes_usdc():
         allowed_eip712_contracts=[usdc_addr],
     )
     assert policy_id == "policy-xyz"
-    assert len(captured_requests) == 1
-    req = captured_requests[0]
-    assert req.url.path == "/public/v1/submit/create_policy"
-    body = json.loads(req.content.decode("utf-8"))
-    assert body["type"] == "ACTIVITY_TYPE_CREATE_POLICY_V3"
-    assert body["parameters"]["effect"] == "EFFECT_ALLOW"
-    assert usdc_addr.lower() in body["parameters"]["condition"]
+    assert len(captured_requests) == 2
+    transaction, eip712 = [json.loads(req.content.decode("utf-8")) for req in captured_requests]
+    assert all(req.url.path == "/public/v1/submit/create_policy" for req in captured_requests)
+    assert all(body["type"] == "ACTIVITY_TYPE_CREATE_POLICY_V3" for body in (transaction, eip712))
+    assert all(body["parameters"]["effect"] == "EFFECT_ALLOW" for body in (transaction, eip712))
+    assert all(body["parameters"]["notes"] == "" for body in (transaction, eip712))
+    assert "ACTIVITY_TYPE_SIGN_TRANSACTION_V2" in transaction["parameters"]["condition"]
+    assert "eth.tx.chain_id == 43113" in transaction["parameters"]["condition"]
+    assert "ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2" in eip712["parameters"]["condition"]
+    assert "eth.eip_712.domain.verifying_contract" in eip712["parameters"]["condition"]
+    assert "0x5425890298aed601595a70AB815c96711a31Bc65" in transaction["parameters"]["condition"]
+    assert "0x5425890298aed601595a70AB815c96711a31Bc65" in eip712["parameters"]["condition"]
 
 
 @pytest.mark.asyncio

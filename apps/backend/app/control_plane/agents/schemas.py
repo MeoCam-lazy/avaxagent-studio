@@ -12,7 +12,7 @@ SLUG_PATTERN = r"^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$"
 
 
 class LLMConfig(BaseModel):
-    provider: str = "anthropic"
+    provider: str = Field(default="anthropic", pattern="^(openai|anthropic)$")
     model: str = "claude-sonnet-5-5"
     system_prompt: str = ""
     temperature: float = Field(default=0.2, ge=0, le=2)
