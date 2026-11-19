@@ -30,7 +30,7 @@ export function MarketplacePage() {
     <>
       <PageHeader
         title="Marketplace"
-        description="Agent public, gọi qua A2A gateway và trả phí mỗi lần gọi bằng x402."
+        description="Khám phá agent public và gọi qua A2A gateway; agent có thể thu phí bằng x402."
         actions={
           <div className="relative w-full sm:w-64">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -89,11 +89,15 @@ function AgentCard({ agent }: { agent: MarketplaceAgent }) {
             </div>
           )}
           <div className="flex items-baseline justify-between gap-2 border-t pt-3">
-            <span>
-              <span className="text-base font-semibold">{formatAtomic(agent.price_atomic)}</span>{" "}
-              {net?.payment_asset ?? "USDC"}
-              <span className="text-muted-foreground"> / lần gọi</span>
-            </span>
+              <span>
+                <span className="text-base font-semibold">
+                  {agent.price_atomic === 0 ? "Miễn phí" : formatAtomic(agent.price_atomic)}
+                </span>{" "}
+                {agent.price_atomic === 0 ? "" : net?.payment_asset ?? "USDC"}
+                <span className="text-muted-foreground">
+                  {agent.price_atomic === 0 ? " · demo" : " / lần gọi"}
+                </span>
+              </span>
             <Badge variant="outline">{agent.settlement_mode}</Badge>
           </div>
         </CardContent>

@@ -1,0 +1,15 @@
+[cười] Hôm nay mình sẽ tạo một agent phân tích paper-trading trên Avaxagent Studio, từ cấu hình đến lúc agent sẵn sàng hoạt động trên Avalanche Fuji.
+
+Đầu tiên, mình đặt tên Fuji Market Briefing Agent, chọn OpenAI và model GPT-4o mini. System prompt yêu cầu agent giải thích rõ điểm vào, điểm dừng lỗ, mục tiêu lợi nhuận và quy mô vị thế. Mình đặt giá job bằng không để chạy bản demo miễn phí, rồi xuất bản agent lên Marketplace.
+
+Tiếp theo là ví. Studio tạo riêng một sub-org Turnkey và một địa chỉ EVM cho agent. Khóa ký được quản lý bởi Turnkey, còn policy giới hạn những thao tác agent được phép thực hiện.
+
+Đây là địa chỉ nhận của ví agent. Mình chuyển không phẩy không một AVAX trên Fuji từ MetaMask. AVAX ở đây là token thử nghiệm, không có giá trị tiền thật. Khi giao dịch được xác nhận, số dư hiện ngay trong ví Turnkey.
+
+Agent cần AVAX để trả gas khi đăng ký danh tính ERC-8004 trên Fuji. Sau khi xác nhận, danh tính on-chain và agent card giúp người khác tìm thấy agent này.
+
+Giờ mình thử agent từ Marketplace. Yêu cầu là lập kế hoạch paper-trading với entry, stop, target và giới hạn rủi ro. A2A gateway chuyển yêu cầu đến agent, agent gọi OpenAI, tính quy mô vị thế rồi trả về một kế hoạch có thể kiểm tra.
+
+Đây chỉ là mô phỏng: không có giá thị trường trực tiếp, không có lệnh mua bán thật. Job demo miễn phí nên không trừ USDC qua x402.
+
+Từ cấu hình, ví Turnkey, giao dịch testnet và danh tính ERC-8004 đến phản hồi AI, Avaxagent Studio kết nối toàn bộ quy trình trong một nơi.

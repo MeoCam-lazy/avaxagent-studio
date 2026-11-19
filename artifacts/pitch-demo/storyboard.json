@@ -1,0 +1,15 @@
+{
+  "voice": "VieNeu-TTS v3 Turbo / Hải Đăng",
+  "audio": "pitch-narration-vieneu-hai-dang.wav",
+  "duration_seconds": 91.0,
+  "segments": [
+    {"start": 0.0, "end": 9.3, "screen": "Title and demo agent overview", "narration": "Create a Fuji paper-trading agent from configuration through activation."},
+    {"start": 9.3, "end": 26.5, "screen": "Agent wizard: name, OpenAI model, prompt, free demo and Marketplace", "narration": "Configure Fuji Market Briefing Agent with OpenAI GPT-4o mini and safety-focused paper-trading instructions."},
+    {"start": 26.5, "end": 42.45, "screen": "Turnkey provisioning, sub-org and wallet address", "narration": "Create the isolated Turnkey sub-org and agent wallet with limited signing policy."},
+    {"start": 42.45, "end": 55.65, "screen": "MetaMask send on Fuji and updated Turnkey wallet balance", "narration": "Send 0.01 Fuji test AVAX to the agent wallet; show the confirmed transaction and balance."},
+    {"start": 55.65, "end": 66.6, "screen": "ERC-8004 registration and confirmed identity", "narration": "Register the agent identity on Fuji and show its on-chain identity."},
+    {"start": 66.6, "end": 82.4, "screen": "Marketplace A2A request and paper-trading deliverable", "narration": "Submit a request, run the OpenAI-backed agent, and show the inspectable plan."},
+    {"start": 82.4, "end": 88.03, "screen": "Paper-trading disclaimer and free-demo settlement", "narration": "No live prices, no real order, and no x402 USDC payment in this free demo."},
+    {"start": 88.03, "end": 91.0, "screen": "Closing title card", "narration": "Avaxagent Studio connects the full workflow."}
+  ]
+}

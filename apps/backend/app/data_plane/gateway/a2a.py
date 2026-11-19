@@ -26,7 +26,7 @@ from app.control_plane.billing.ledger import record_income
 from app.control_plane.jobs.events import add_event
 from app.control_plane.jobs.models import Job, JobStatus
 from app.control_plane.wallets.models import Wallet
-from app.core.config import SettlementMode
+from app.core.config import SettlementMode, settings
 from app.core.queue import RUN_JOB
 from app.data_plane.gateway.relayer import Relayer
 from app.data_plane.gateway.schemas import JsonRpcRequest
@@ -192,6 +192,41 @@ async def handle_a2a(
         )
 
     ch = challenge(agent, wallet)
+
+    # Development-only free calls let a public, zero-priced demo agent run its
+    # real LLM workflow without pretending that a payment was settled.
+    if (
+        not x_payment
+        and settings.environment == "development"
+        and agent.is_public
+        and agent.price_atomic == 0
+    ):
+        job = Job(
+            agent_id=agent.id,
+            settlement_mode=SettlementMode.X402,
+            status=JobStatus.FUNDED,
+            chain_id=chain_id(),
+            client_address=None,
+            amount_atomic=0,
+            asset=net.payment_asset_address(),
+            request=req.params,
+        )
+        db.add(job)
+        await db.flush()
+        await add_event(db, job, "accepted", message="Free development demo call; no payment was made.")
+        await db.commit()
+        try:
+            await queue.enqueue_job(RUN_JOB, str(job.id))
+        except Exception:
+            logger.exception("Redis enqueue failed for free demo job %s", job.id)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "jsonrpc": "2.0",
+                "id": req.id,
+                "result": {"kind": "task", "id": str(job.id), "status": {"state": "submitted"}},
+            },
+        )
 
     # If no payment provided -> HTTP 402 Challenge
     if not x_payment:

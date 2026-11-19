@@ -64,7 +64,10 @@ class WalletService:
             sub_org.sub_org_id,
             default_policy,
             chain_id=net.chain_id(),
-            allowed_eip712_contracts=[net.payment_asset_address()],
+            allowed_eip712_contracts=[
+                net.payment_asset_address(),
+                net.identity_registry(),
+            ],
         )
 
         wallet = Wallet(
@@ -124,7 +127,10 @@ class WalletService:
                 wallet.turnkey_sub_org_id,
                 policy,
                 chain_id=wallet.chain_id,
-                allowed_eip712_contracts=[net.payment_asset_address()],
+                allowed_eip712_contracts=[
+                    net.payment_asset_address(),
+                    net.identity_registry(),
+                ],
             )
 
         wallet.policy = policy.model_dump()

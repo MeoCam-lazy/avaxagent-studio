@@ -63,8 +63,14 @@ function Profile({ agent }: { agent: MarketplaceAgentProfile }) {
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <p>
-          <span className="text-2xl font-semibold">{formatAtomic(agent.price_atomic)}</span>{" "}
-          {net?.payment_asset ?? "USDC"} <span className="text-muted-foreground">/ lần gọi</span>
+          <span className="text-2xl font-semibold">
+            {agent.price_atomic === 0 ? "Miễn phí" : formatAtomic(agent.price_atomic)}
+          </span>{" "}
+          {agent.price_atomic === 0 ? (
+            <span className="text-muted-foreground">· demo</span>
+          ) : (
+            <>{net?.payment_asset ?? "USDC"} <span className="text-muted-foreground">/ lần gọi</span></>
+          )}
         </p>
         {agent.skills.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -77,7 +83,9 @@ function Profile({ agent }: { agent: MarketplaceAgentProfile }) {
         )}
         <dl className="divide-y">
           <Row label="Thanh toán">
-            <Badge variant="outline">{agent.settlement_mode}</Badge>
+            <Badge variant="outline">
+              {agent.price_atomic === 0 ? "Free demo" : agent.settlement_mode}
+            </Badge>
           </Row>
           <Row label="Job hoàn thành">{agent.jobs_completed}</Row>
           <Row label="ERC-8004">
@@ -126,6 +134,7 @@ function CallAgent({ agent, pollIntervalMs }: { agent: MarketplaceAgentProfile; 
   const pay = usePayAgent(agent.a2a_url);
   const symbol = net?.payment_asset ?? "USDC";
   const price = `${formatAtomic(agent.price_atomic)} ${symbol}`;
+  const freeDemo = agent.price_atomic === 0;
 
   if (agent.settlement_mode !== "x402") {
     return (
@@ -151,8 +160,9 @@ function CallAgent({ agent, pollIntervalMs }: { agent: MarketplaceAgentProfile; 
       <CardHeader>
         <CardTitle>Gọi agent</CardTitle>
         <CardDescription>
-          Ký một uỷ quyền chuyển {price} (EIP-3009). Gateway trả phí gas và chuyển tiền on-chain, nên
-          ví chỉ cần {symbol}, không cần AVAX.
+          {freeDemo
+            ? "Demo không thu x402 từ người gọi; job vẫn dùng quota LLM phía máy chủ. Kế hoạch paper-trading chỉ mô phỏng, không đặt lệnh thật."
+            : `Ký uỷ quyền chuyển ${price} (EIP-3009). Gateway trả phí gas và chuyển tiền on-chain, nên ví chỉ cần ${symbol}, không cần AVAX.`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -171,7 +181,7 @@ function CallAgent({ agent, pollIntervalMs }: { agent: MarketplaceAgentProfile; 
           {net && pay.address && <PayerBalance net={net} address={pay.address} price={agent.price_atomic} />}
           <Button type="submit" disabled={pay.busy || !text.trim()} className="w-full sm:w-auto">
             {pay.busy && <Loader2 className="animate-spin" />}
-            {pay.busy ? "Đang xử lý…" : `Trả ${price} và gửi`}
+            {pay.busy ? "Đang xử lý…" : freeDemo ? "Gửi yêu cầu miễn phí" : `Trả ${price} và gửi`}
           </Button>
           {pay.busy && PHASE_LABELS[pay.phase] && (
             <p className="text-muted-foreground text-sm" role="status">
