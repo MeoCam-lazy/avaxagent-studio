@@ -18,6 +18,9 @@ apps/frontend/dist/
 .env
 .env.*
 !.env.example
+deploy/oci.env
+deploy/oci-state.json
+deploy/turnkey-relayer-state.json
 *.key
 *.pem
 

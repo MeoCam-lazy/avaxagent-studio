@@ -22,7 +22,7 @@ const GATEWAY_MESSAGES: Record<string, string> = {
   agent_has_no_wallet: "Agent chưa có ví nhận thanh toán.",
   payment_replayed: "Chữ ký thanh toán này đã được dùng. Hãy gửi lại.",
   settlement_failed:
-    "Gateway không quyết toán được khoản thanh toán on-chain. Kiểm tra số dư token của ví rồi thử lại.",
+    "Thanh toán trên Fuji chưa hoàn tất. Vui lòng gửi lỗi này cho quản trị viên để kiểm tra giao dịch và ví relayer.",
   insufficient_value: "Số tiền ký thấp hơn giá của agent.",
   expired: "Chữ ký đã hết hạn. Hãy gửi lại.",
   not_yet_valid: "Đồng hồ máy bạn lệch so với gateway. Hãy kiểm tra giờ hệ thống.",

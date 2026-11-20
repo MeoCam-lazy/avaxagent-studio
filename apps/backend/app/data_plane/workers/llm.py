@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Protocol, runtime_checkable
 
 import anthropic
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, BadRequestError
 
 from app.core.config import settings
 from app.core.errors import FeatureDisabled
@@ -83,13 +83,28 @@ class OpenAIRunner:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "max_completion_tokens": 4096,
+        }
+        # GPT-6 defaults to reasoning and rejects custom sampling temperature.
+        if not model.startswith("gpt-6"):
+            kwargs["temperature"] = temperature
+
         async with AsyncOpenAI(api_key=self.api_key) as client:
-            response = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_completion_tokens=4096,
-                temperature=temperature,
-            )
+            try:
+                response = await client.chat.completions.create(**kwargs)
+            except BadRequestError as exc:
+                if (
+                    "temperature" not in kwargs
+                    or exc.param != "temperature"
+                    or exc.code != "unsupported_value"
+                ):
+                    raise
+                # Model capabilities may change before this runner knows their names.
+                del kwargs["temperature"]
+                response = await client.chat.completions.create(**kwargs)
         return response.choices[0].message.content or ""
 
 

@@ -210,7 +210,9 @@ describe("MarketplaceAgentPage", () => {
     renderProfile();
     await send("hello");
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/không quyết toán được/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Thanh toán trên Fuji chưa hoàn tất. Vui lòng gửi lỗi này cho quản trị viên để kiểm tra giao dịch và ví relayer.",
+    );
   });
 
   it("shows the failure reason of a failed task", async () => {
